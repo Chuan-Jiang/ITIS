@@ -1,0 +1,139 @@
+#!/usr/bin/perl
+use warnings; use strict;
+use Seq;
+use Bio::Seq;
+use Bio::Tools::Run::Alignment::Muscle;
+my ($sam_file,$genome_file,$ins_len) = @ARGV;
+
+
+############
+
+#############
+
+my %genomes = Seq::seq_hash($genome_file);
+my %simu_ge; ### hash conatin a string of 0, with the length eqaul to genoe;
+while(my($k,$v) = each(%genomes)){
+	my $len = length $v;
+	$simu_ge{$k} = "0"x$len;
+}
+#print %simu_ge;
+
+
+
+
+##############################
+   ## Scan sam file ##
+print "scanning sam file.....\n";
+open SAM, $sam_file or die $!;
+my %reads;
+while(<SAM>){
+	chomp;
+	my($id) = (split /\t/,$_)[0];
+	if(! keys %reads or exists ($reads{$id})){
+		$reads{$id} .= "############$_";
+	}else{
+		my @arr = values %reads;
+		my @va = split '############',$arr[0];
+		shift @va;
+		find(@va);
+		
+		undef(%reads);
+		$reads{$id} = "############$_";
+	}
+}
+
+=head
+################# check the simu genome to identify the insertion hot spot
+print "procesing simu genome.......\n";
+foreach my $chr (keys  %simu_ge){
+	my $seq = $simu_ge{$chr};
+	my $len = length($seq);
+	for(my $i = 0;$i < $len;$i+= 50){
+		my $sub = substr($seq,$i,100);
+		my @pos = split '', $sub;
+		my $tot +=$_ foreach(@pos);
+		print "$chr\t$i\n" if ($tot > 3);
+	}
+}
+=cut
+
+
+
+
+##################     parsing the paired reads
+
+sub find{
+	my @reads = @_;
+	my %cors = corr(@reads);
+	foreach my $k (keys %cors){
+		my $v = $cors{$k};
+		my($chr,$pos) = split ":",$v;
+		print "$chr\t$pos\n";
+		#my $n = substr($simu_ge{$chr},$pos-1,1);
+		#if ($n < 9){
+		#	substr($simu_ge{$chr},$pos-1,1) = $n + 1;
+		#}
+	}
+}
+
+sub corr{
+	my @reads = @_;
+	my %cors;
+	foreach my $it (@reads){
+		my($id,$flag,$chr,$pos,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,5,6,7,9];
+		(my $r = $flag ) =~ s/\w+(\d)/$1/;
+		if( $chr ne "tnt1"){
+			my($que,$sub_h,$sub_t);
+			if ($cig =~ /^([0-9]*[5-9]+)S\d+M$/){
+				$que =  substr($seq,0,$1);
+				$sub_h = substr($genomes{tnt1},0,$1);
+				$sub_t = substr($genomes{tnt1},-$1);
+			}elsif($cig =~ /^\d+M([0-9]*[5-9]+)S$/){
+				$que = substr($seq,-$1);
+				$sub_h = substr($genomes{tnt1},0,$1);
+				$sub_t = substr($genomes{tnt1},-$1);
+			}else{
+				next;
+			}
+			my ($iden,$direc) = cal_iden($que,$sub_h,$sub_t);
+			next if ($iden < 0.9);
+			#print "$que\t$chr:$pos\n";
+			$cors{$r} = "$chr:$pos";
+		}else{
+			next;
+		}
+	}
+	return %cors;
+}
+
+sub cal_iden {
+	my $factory = Bio::Tools::Run::Alignment::Muscle -> new ();
+	my ($que,$sub_h,$sub_t) = @_;
+	(my $que_rc = $que) =~ tr/ATCGatcg/TAGCtagc/;
+	$que_rc = reverse ($que_rc);
+	my @objs;
+	
+	foreach ($que_rc,@_){
+		my $o = Bio::Seq -> new (-seq =>$_,-alphabet=>"dna");
+		push @objs,$o;
+	}
+	my %records;
+	for my $i (0..1){                   #### 1 is the sequence form clipped part while  0 is the rever comple 
+		for my $j (2..3){
+			my @sub_arr = @objs[$i,$j];	
+			my $ref = \@sub_arr;
+			my $aln = $factory -> align($ref);
+			my $ide = $aln -> percentage_identity;
+			$records{$ide} = $i;
+		}
+	}
+	
+	foreach my $k (sort {$b<=>$a} keys %records){
+		my $v = $records{$k};
+		my $s = ($v == 0?"r":"s");
+		return ($k,$s);
+		last;
+	}
+}
+				
+

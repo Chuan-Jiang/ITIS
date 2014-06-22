@@ -1,0 +1,401 @@
+#!/usr/bin/perl
+use warnings; use strict;
+use Seq;
+use Bio::Seq;
+my ($sam_file,$genome_file,$ins_len,$te,$ltr) = @ARGV;
+print "$0 <sam> <genome> <ins_len> <te_name> <ltr_len>\n" unless @ARGV;
+############# genome seq in hash  #########
+my %genomes = Seq::seq_hash($genome_file);
+#print %simu_ge;
+my $tnt_len = length ($genomes{$te});
+
+
+###########################################
+   ## Scan sam file ##
+
+print STDERR "scanning sam file.....\n";
+open SAM, $sam_file or die $!;
+my %reads;
+my $num;
+my $num_eff;
+my $num_f;
+my $disc;
+while(<SAM>){
+	chomp;
+	my($id) = (split /\t/,$_)[0];
+	if(! keys %reads or exists ($reads{$id})){
+		$reads{$id} .= "############$_";
+	}else{
+		my @arr = values %reads;
+		my @va = split '############',$arr[0];
+		shift @va;
+		find(@va);
+		undef(%reads);
+		$reads{$id} = "############$_";
+	}
+}
+print "$disc\n";
+##################     parsing the paired reads
+my $tar;
+my $rds;
+sub find{
+	$num ++;
+	my @reads = @_;
+	$rds = join "\n",@_; ## in order to print informative reads in one file 
+	
+	my %cors;
+	my $cors_ref = \%cors;
+	
+	my %trans;
+	foreach my $it (@reads){
+		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9];
+		#print "$id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq\n";
+		if ($chr =~ /$te/ and $nchr ne "="){
+				$trans{nchr} = $nchr;
+				$trans{pos}  = $pos;
+				$trans{npos} = $npos;
+				(my $r = $flag ) =~ s/\w+(\d)s?/$1/;
+				my $rc = (($flag =~ /r/)? -1:1); 
+				$trans{cig} = (($cig =~ /H/)?$r*$rc:0);
+		
+				my $len = length $seq;		        #  reads length
+				my $c;                      #  simplified cigar 
+				my ($m);					# match length
+				my $s = 0;					# match the longest soft clipped sequence
+				while ($cig =~ /(\d+)([MS])/g){
+					$m += $1 if ($2 eq "M");
+					$s = $1 if ($2 eq "S" and $1 > $s);
+				}
+				if ($m/$len > 0.95 ){
+					$c = "M";
+				}elsif ( $cig =~ /^${s}S/ and $s >= 5){
+					$c = "S:$s";
+				}elsif ( $cig =~ /${s}S$/ and $s >= 5){
+					$c = "E:$s";
+				}else{
+					$c = "Z";
+				}
+	
+				$cors{$te}{cig} = $c;      # simplified cigar: M H T Z
+				$cors{$te}{direc} = $rc;   # reads direction
+				$cors{$te}{chr} = $chr;    # which chromosome
+				$cors{$te}{id} = $id;	  # read id 
+				$cors{$te}{pos} = $pos;  ### when reads if reverse complement the start loc of reads should plus the length of reads
+				$cors{$te}{seq} = $seq;
+				$cors{$te}{mq} = $mq;
+		}
+	}
+	#print "$trans{nchr}\t$trans{pos}\t$trans{npos}\n";
+
+	foreach my $it (@reads){
+		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9];	
+		(my $r = $flag ) =~ s/\w+(\d)/$1/;  #  which reads?????
+		my $rc = (($flag =~ /r/)? -1:1);    # -1 antisense   and 1 means sense strand
+		
+
+#### if tht are hard clipped, exacute following code
+		my $test_n = (($cig !~ /H/)?$r*$rc:0);
+		if (abs($trans{cig})== abs ($test_n) and ($trans{cig})*($test_n) > 0){
+			$cors{$te}{seq} = $seq;
+		}elsif(abs($trans{cig})== abs ($test_n)  and ($trans{cig})*($test_n) < 0){
+			$cors{$te}{seq} = Seq::rev_com($seq);
+		}
+		
+#### select informative reads######
+		if ($chr =~ /$trans{nchr}/ and $pos == $trans{npos}){
+				my $tar = $chr;
+				my $len = length $seq;		        #  reads length
+				my $c;                      #  simplified cigar 
+				my ($m);					# match length
+				my $s = 0;					# match the longest soft clipped sequence
+				while ($cig =~ /(\d+)([MS])/g){
+					$m += $1 if ($2 eq "M");
+					$s = $1 if ($2 eq "S" and $1 > $s);
+				}
+				if ($m/$len > 0.95 ){
+					$c = "M";
+				}elsif ( $cig =~ /^${s}S/ and $s >= 5){
+					$c = "S:$s";
+				}elsif ( $cig =~ /${s}S$/ and $s >= 5){
+					$c = "E:$s";
+				}else{
+					$c = "Z";
+				}
+	
+				$cors{$tar}{cig} = $c;      # simplified cigar: M H T Z
+				$cors{$tar}{direc} = $rc;   # reads direction
+				$cors{$tar}{chr} = $chr;    # which chromosome
+				$cors{$tar}{id} = $id;	  # read id 
+				$cors{$tar}{pos} = $pos;  ### when reads if reverse complement the start loc of reads should plus the length of reads
+				$cors{$tar}{seq} = $seq;
+				$cors{$tar}{mq} = $mq;
+		}
+	}
+	print %cors."\n";
+}
+=cut
+	if ( $cors{$tar}{cig} eq "M" and $cors{$te}{cig} eq "M"){
+		cross(%cors);
+	}elsif($cors{$te}{cig} =~ /S/){
+		te_start(%cors);
+	}elsif($cors{$te}{cig} =~ /E/){
+		te_end(%cors);
+	}elsif($cors{$tar}{cig} =~ /S/){
+		ge_start(%cors);
+	}elsif($cors{$tar}{cig} =~ /E/){
+		ge_end(%cors);
+	}
+
+}
+
+
+			
+
+
+sub cross {
+	my %cors = @_;
+	if ( $cors{$te}{direc} == 1 and ( $cors{$te}{pos} > ($tnt_len - $ltr) or $cors{$te}{pos} < ($ltr - 100))){
+		my ($ins_direc,$jun);
+		if ($cors{$tar}{direc} == 1){
+			$ins_direc = "R";
+			$jun = $cors{$tar}{pos} + length ($cors{$tar}{seq});
+		}else{
+			$ins_direc = "S";
+			$jun = $cors{$tar}{pos};
+		}
+		print "$cors{$te}{id}\t$ins_direc\t$cors{$tar}{chr}\t$jun\tCE\n";
+		print STDERR "$rds\n";
+		$num_eff ++;
+	}elsif ( $cors{$te}{direc} == -1 and ($cors{$te}{pos} <  ($ltr-100)  or $cors{$te}{pos} > ($tnt_len - $ltr) )){
+		my ($ins_direc,$jun);
+		if ( $cors{$tar}{direc} == 1 ){
+			$ins_direc = "S";
+			$jun = $cors{$tar}{pos} + length($cors{$tar}{seq});
+		}else{
+			$ins_direc = "R";
+			$jun = $cors{$tar}{pos};
+		}
+		print "$cors{$te}{id}\t$ins_direc\t$cors{$tar}{chr}\t$jun\tCS\n";
+		print STDERR "$rds\n";
+		$num_eff++;
+	}else{
+		$num_f ++;
+	}
+}
+
+sub te_start{
+	my %cors = @_;
+	if($cors{$te}{cig} =~ /S:(\d+)/ ){
+		my $l = $1;
+		if ($cors{$te}{pos} <=2 or ($cors{$te}{pos} <= ($tnt_len - $ltr + 2) and $cors{$te}{pos} > ($tnt_len - $ltr))){
+			my $que = substr($cors{$te}{seq},0,$l);
+			( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+			$que_r = reverse $que_r;
+			my $ins_direc;
+			my $sub;
+			my $chr_t = $cors{$tar}{chr};
+			my $pos_t = $cors{$tar}{pos};
+			my $len_t = length $cors{$tar}{seq};
+			if($cors{$tar}{direc} == 1){
+				$ins_direc = "S";
+				$sub = substr($genomes{$chr_t},$pos_t-1,$ins_len);
+				my $jun = -1;
+				my $m_r = 2 ;
+				for my $i (0..(length ($sub)- length ($que))){
+					my $s = substr($sub,$i,$l);
+					my $diffcount = () = ($que ^ $s) =~ /[^\x00]/g;
+					if ($diffcount < $m_r){
+						$jun = $i;
+						$m_r = $diffcount;
+					}
+				}
+				if($jun != -1){
+					$jun = $jun + $pos_t;
+					print "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
+					print STDERR "$rds\n";
+				}else{
+					$num_f ++;
+				}
+			}else{
+				$ins_direc = "R";
+				my $sub_start = $pos_t+$len_t-$ins_len;
+				$sub = substr($genomes{$chr_t},$sub_start-1,$ins_len);
+				my $jun = -1;
+				my $m_r = 2;
+				for my $i (0..(length ($sub)- length ($que))){
+					my $s = substr($sub,$i,$l);
+					my $diffcount = () = ($que_r ^ $s) =~ /[^\x00]/g;
+					if ($diffcount < $m_r){
+						$jun = $i;
+						$m_r = $diffcount;
+					}
+				}
+				if($jun != -1){
+					$jun = $jun + $sub_start;
+					print "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
+					print STDERR "$rds\n";	
+			}else{
+					$num_f++;
+				}
+			}
+		}else{
+			$num_f ++;
+		}
+	}
+}
+
+sub te_end{
+	my %cors = @_;
+	if ($cors{$te}{cig} =~ /E:(\d+)/){
+		my $l = $1;
+		my $end_pos = $cors{$te}{pos} + length($cors{$te}{seq}) - $l;
+		if ($end_pos >= $tnt_len-10 or 	($end_pos <= ($ltr+5) and $end_pos >= ($ltr - 10))){
+			my $que = substr($cors{$te}{seq},-$l);
+			( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+			$que_r = reverse $que_r;
+			my $ins_direc;
+			my $sub;
+			my $chr_t = $cors{$tar}{chr};
+			my $pos_t = $cors{$tar}{pos};
+			my $len_t = length $cors{$tar}{seq};
+			if($cors{$tar}{direc} == 1){
+				$ins_direc = "R";
+				$sub = substr($genomes{$chr_t},$pos_t-1,$ins_len);
+				my $jun = -1;
+				my $m_r = 2 ;
+				for my $i (0..(length ($sub)- length ($que))){
+					my $s = substr($sub,$i,$l);
+					my $diffcount = () = ($que_r ^ $s) =~ /[^\x00]/g;
+					if ($diffcount <= $m_r){
+						$jun = $i;
+						$m_r = $diffcount;
+					}
+				}
+				if($jun != -1){
+					$jun = $jun + $pos_t;
+					print "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
+					print STDERR "$rds\n";
+				}else{
+					$num_f ++;
+				}
+			}else{
+				$ins_direc = "S";
+				my $sub_start = $pos_t+$len_t-$ins_len;
+				$sub = substr($genomes{$chr_t},$pos_t-1,$ins_len);
+				my $jun = -1;
+				my $m_r = 2 ;
+				for my $i (0..(length ($sub)- length ($que))){
+					my $s = substr($sub,$i,$l);
+					my $diffcount = () = ($que ^ $s) =~ /[^\x00]/g;
+					if ($diffcount <= $m_r){
+						$jun = $i;
+						$m_r = $diffcount;
+					}
+				}
+				if($jun != -1){
+					$jun = $jun + $pos_t;
+					print "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
+					print STDERR "$rds\n";
+				}else{
+					$num_f ++;
+				}
+			}
+		}
+	}
+}
+
+sub ge_start{
+	my %cors = @_;
+	if($cors{$tar}{cig} =~ /S:(\d+)/){
+		my $l = $1;
+		my $que = substr($cors{$tar}{seq},0,$l);
+		( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+		$que_r = reverse $que_r; 
+		my $len = (length $que ) ;
+		my $sub_h = "AAAAA".substr($genomes{$te},0,$len+5);
+		my $sub_t = substr($genomes{$te},-($len+5))."AAAAA";
+		my $ma = match($que,$que_r,$sub_h,$sub_t);
+		if ($ma != 0){
+			my $ma_direc = $ma * $cors{$tar}{direc};
+			if (($ma_direc == -3 and $cors{$te}{direc} == 1)){
+				my $ins_direc = "S";
+				my $jun  = $cors{$tar}{pos};
+				print "$cors{$tar}{id}\t$ins_direc\t$cors{$tar}{chr}\t$jun\tGS\n";
+				print STDERR "$rds\n";
+				$num_eff++;
+			}elsif(( $ma_direc == 2 and $cors{$te}{direc} == -1)) {
+				my $ins_direc = "R";
+				my $jun = $cors{$tar}{pos};
+				print "$cors{$tar}{id}\t$ins_direc\t$cors{$tar}{chr}\t$jun\tGS\n";
+				print STDERR "$rds\n";
+				$num_eff++;
+			}else{
+				$num_f ++;
+			}
+		}else{
+			$num_f ++;
+		}
+	}
+}
+
+sub ge_end{
+	my %cors = @_;
+	if($tar >0 and $cors{$tar}{cig} =~ /E:(\d+)/){
+				my $l = $1;
+				my $que = substr($cors{$tar}{seq},-$l);
+				( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+				$que_r = reverse $que_r; 
+				my $len = (length $que ) ;
+				my $sub_h = "AAAAA".substr($genomes{$te},0,$len+5);
+				my $sub_t = substr($genomes{$te},-($len+5))."AAAAA";
+				my $ma = match($que,$que_r,$sub_h,$sub_t);
+				if ($ma != 0){
+					my $ma_direc = $ma * $cors{$tar}{direc};
+					if (($ma_direc == -3 and $cors{$te}{direc} == 1)){
+						my $ins_direc = "R";
+						my $jun = $cors{$tar}{pos} + length($cors{$tar}{seq})-$l;
+						print "$cors{$tar}{id}\t$ins_direc\t$cors{$tar}{chr}\t$jun\tGE\n";
+						print STDERR "$rds\n";
+						$num_eff++;
+					}elsif ( $ma_direc == 2 and $cors{$te}{direc} == -1){
+						my $ins_direc = "S";
+						my $jun = $cors{$tar}{pos} + length($cors{$tar}{seq})-$l;
+						print "$cors{$tar}{id}\t$ins_direc\t$cors{$tar}{chr}\t$jun\tGE\n";
+						print STDERR "$rds\n";
+						$num_eff++;
+					}else{
+						$num_f++;
+					}
+				}else{
+					$num_f++;
+				}
+	}else{
+			$num++;
+	}
+}
+sub match {
+	my %relas;
+	for my $j (0..1){
+		for my $k (2..3){
+			for my $i (0..10){
+				my $que = $_[$j];
+				my $q_l = length $que;
+				my $sub = substr($_[$k],$i,$q_l);
+				my $diffcount = () = ($que ^ $sub) =~ /[^\x00]/g;
+				#print "$diffcount\t$len_q\n";
+				my $direc = ($j==0?1:-1);
+				$relas{$diffcount} = $direc*$k;
+			}
+		}
+	}
+	foreach (sort {$a<=>$b} keys %relas){
+		if ( $_ <= 3){
+			my $v = $relas{$_};
+			return "$v";   #### return value SH  ST RH  RT  
+		}else{
+			return "0";
+		}
+		last;
+	}
+}
+
