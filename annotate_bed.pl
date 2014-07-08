@@ -4,24 +4,28 @@ use Seq;
 use Getopt::Std;
 
 my %opt;
-getopts("b:a:g:i:t:h",\%opt);
 
-my($bed_file,$gff_file,$genome_file,$tnt) = ($opt{b},$opt{a},$opt{g},$opt{t});
-die  "USAGE:
+my $usage =   "USAGE:
 	$0 :
-	-b bed file of insertion locs
-	-a annotation file in gff format ( only contain 'GENE')
-	-g genome sequence
-	-i generate igv snpshot batch file? <file name> 
-	-t the name of your retrotransposon name
-	-h print this help infor
-	" if ($opt{h});
+	-b bed file of insertion locs {REQUIRED}
+	-a annotation file in gff3 format { If not provied , only generate snpbatch filt for IGV}
+	-g merged genome sequence with TE          {REQUIRED}
+	-n the name of your retrotransposon name   {REQUIRED}
+	-p the prefix you project                  {REQUIRED}
+	-h print this help infor                    
+	-d the directory contain your results      Default: "." 
+	" ;
+die $usage if (@ARGV == 0);
+getopts("b:a:g:i:n:p:d:h",\%opt);
+die $usage if ($opt{h});
+my($bed_file,$gff_file,$genome_file,$te,$proj) = ($opt{b},$opt{a},$opt{g},$opt{n},$opt{p});
+my $folder = $opt{d}?$opt{d}:'.';
+
 
 ################ generate igv batch   #############
-if ($opt{i}){
-	open FH,">$opt{i} " or die $!;
+	open FH,"> $folder/$proj.igv.bat" or die $!;
 	open BED,"$bed_file" or die $!;
-	print FH "snapshotDirectory ./$opt{t}_snap\n";
+	print FH "snapshotDirectory ./$proj.snap.dir\n";
 	while (<BED>){
 		chomp;
 		 my ($chr,$s,$e) = split /\t/,$_;
@@ -35,13 +39,15 @@ if ($opt{i}){
 			 print FH "snapshot ${chr}_${s}_${e}_slop$slop.png\n";
 		 }
 	 }
- }
 
 
+if($opt{a}){    #  if provided gff file, then process the following code util the end
 
 ################# generate usefull gff file containg intergenic region  ##########
-open TEM,">tem" or die $!;
-open GFF,"$gff_file " or die $!;
+
+open OUT, ">$folder/$proj.annotation.tsv" or die $!;
+open TEM,">tem.$proj" or die $!;
+open GFF,"awk 'BEGIN{IGNORECASE=1} {if(\$3 ~ /gene/){print \$0}}' $gff_file |" or die $!;
 chomp (my @gff = <GFF>);
 for (my $i = 1;$i<@gff;$i++){
 	print TEM "$gff[$i-1]\n";
@@ -82,7 +88,7 @@ my %genome = Seq::seq_hash($genome_file);
 
 ################### intersect using bedtools  ###########################
 
-open BEDTOOL, "bedtools intersect -a $bed_file -b tem -wa -wb |" or die $!;
+open BEDTOOL, "bedtools intersect -a $bed_file -b tem.$proj -wa -wb |" or die $!;
 
 my $la=0;
 my $la_t;
@@ -92,7 +98,7 @@ while (<BEDTOOL>){
 	my($chr,$s,$e,$d,$t,$an) = (split /\t/,$_)[0,1,2,3,6,12];
 	next if (($s+$e) == $la and $la_t eq "gene");
 	my ($up,$down);
-	my $tnt_seq = ($d =~ /:S:/)?$genome{$tnt}:Seq::rev_com($genome{$tnt});
+	my $te_seq = ($d =~ /:S:/)?$genome{$te}:Seq::rev_com($genome{$te});
 	if ($d =~ /:P$/){
 		$up = substr ($genome{$chr},$e-1005,1005);
 		$down = substr ($genome{$chr},$s,1005);
@@ -100,11 +106,14 @@ while (<BEDTOOL>){
 		$up = substr ($genome{$chr},$s-1000,1000)."=";
 		$down = "=".substr ($genome{$chr},$e-1,1000);
 	}
-	my $seq = $up.lc($tnt_seq).$down;
-	print "$chr\t$s\t$e\t$d\t$t\t$an\t$seq\n";
+	my $seq = $up.lc($te_seq).$down;
+	print OUT "$chr\t$s\t$e\t$d\t$t\t$an\t$seq\n";
+
 	$la = $s+$e;
 	$la_t = $t;
 
 }
 
-unlink "tem";
+unlink "tem.$proj";
+
+}

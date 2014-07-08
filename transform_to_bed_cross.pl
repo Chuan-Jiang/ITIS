@@ -5,37 +5,21 @@ use Getopt::Std;
 ############## parameters ##############
 my %opt;
 my $usage = "$0
-	-p : project_name/ will be prefix of your output file
-	-i : <REQUIRED> reads list file support insertion  
-	-w : default 100, windows size to cluster reads
-	
-FILTER parameters:
-	-t : defualt [3,1,1], the required number of events support insert: total 3, at TE start 1, ant TE end 1; 
-		 If Sites with total larger than or equal 3, it will be saved as raw list \$proj.raw.inser.bed
 	-b : original bam file; used to calculate the bg depth
-	-r : default 0.2; the ratio of number of support reads with background depth aroung 200bp, assume '-b'
-	-D : default <3,200>; the required depth region; assume '-b '
-	
+	-i : reads file support insertion
+	-t : defualt 3, the required number of reads support insert
+	-w : default 100, windows size to cluster reads
 	-h : help
+
 	";
 
 die $usage if (@ARGV == 0);
-getopts("p:i:t:r:D:b:w:h",\%opt);
+getopts("b:i:t:w:h",\%opt);
 die $usage if ($opt{h});
 
-my $proj = $opt{p};
-
-my $ins_file = $opt{i};
-
+my $tre = $opt{t}?$opt{t}:3;
+my ($ins_file,$bam) = ($opt{i},$opt{b});
 my $window = $opt{w}?$opt{w}:100;
-
-my ($total_reads,$te_s,$te_e) = $opt{t}?(split ',',$opt{t}):(split ',','3,1,1');
-
-my $bam = $opt{b}?$opt{b}:0;
-
-my $ratio = $opt{r}?$opt{r}:0.2;
-
-my ($min_d,$max_d) = $opt{D}?(split ',',$opt{D}):(split ',',"3,200");
 ###############parameters################
 #########################################
 #########################################
@@ -43,9 +27,6 @@ my ($min_d,$max_d) = $opt{D}?(split ',',$opt{D}):(split ',',"3,200");
 
 
 open INS,$ins_file or die $!;
-open OUT_F, ">$proj.filtered.bed" or die $!;
-open OUT_R, ">$proj.raw.bed" or die $!; 
-
 chomp (my @sites = <INS>);   # put all sorted ins_file in in array
 
 my @list;    # contain all the support reads  list without filtered
@@ -73,7 +54,8 @@ for (my $i = 0;;){
 		}else{
 			$win_s = $window;
 		}
-				
+		
+		
 		if (($dir_p eq $dir_n ) and  ($chr_p eq $chr_n ) and  (($pos_n - $pos_p ) <= $win_s)){
 			push @clu,$sites[$nex];       # @clu have a cluster of support reads each within a window 50bp
 		}else{
@@ -139,16 +121,7 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		$ee = 0;
 	}	
 	##################
-	my($clp_s,$clp_e,$crs_s,$crs_e) = (scalar@sit_s,scalar@sit_e,scalar@rou_s,scalar@rou_e);
-	my $total = $clp_s+$clp_e+$crs_s+$crs_e;
-	
-	my $boo = 0;
-
-	if ($total >=  $total_reads and  ($clp_s + $crs_s) >= $te_s and ($clp_e+$crs_e) >= $te_e){     #####i########################  filtering 1#####  filtering 1
-		$boo = 1;
-	}
-	
-	my $t = join ",",$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
+	my $t = join ",",scalar@sit_s,scalar@sit_e,scalar@rou_s,scalar@rou_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
 		
 	my($s_p,$e_p);	 #  to print 
 	if ($dir eq "R"){
@@ -159,40 +132,55 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		$t = "+$sc=$t";
 	}
 
+	
+	my $pad = int((100 - ($e_p-$s_p))/2);
+	
+	# $s_r and $e_r are a large region to count the fragment cover the putative insertion site
+	# $s_p and $e_p are putative insertion sites
+	my ($s_r,$e_r)=$pad>0 ? ($s_p-$pad,$e_p+$pad):($s_p,$e_p);
 
-	if ($bam){	
-		my $pad = int((100 - ($e_p-$s_p))/2);
+	######## pick the bg depth ######
+	#system("samtools view $bam  $chr:$s_r-$e_r -b -h | samtools sort -n - tmp_for_itit.sort 2>/dev/null")== 0 or die " PIPE error when calculate bg reads\n";
 	
-		# $s_r and $e_r are a large region to count the fragment cover the putative insertion site
-		# $s_p and $e_p are putative insertion sites
-		my ($s_r,$e_r)=$pad>0 ? ($s_p-$pad,$e_p+$pad):($s_p,$e_p);
-	
-		######## pick the bg depth ######
-		#system("samtools view $bam  $chr:$s_r-$e_r -b -h | samtools sort -n - tmp_for_itit.sort 2>/dev/null")== 0 or die " PIPE error when calculate bg reads\n";
-	
-		open SV,"samtools depth  $bam  -r $chr:$s_r-$e_r  2>/dev/null| " or die $!;
-		my $dep;
-		my $m_l;
-		while(<SV>){
-			my ($id,$pos,$d)= (split /\t/,$_)[0,1,2];
-			$dep += $d;
-			$m_l++;
-		}
-		if( $m_l and $dep){
-			$dep = int($dep/$m_l);
+	open SV,"samtools mpileup $bam  -r $chr:$s_r-$e_r  2>/dev/null| " or die $!;
+	my %pos_h;  # save each reads position
+	my $dep;
+	while(<SV>){
+		my ($id,$pos,$cig,$seq)= (split /\t/,$_)[0,3,5,9];
+		my($s,$e);
+		if ($cig =~ /^(\d+)(S|H)/){
+			$s = $pos-$1;
+			if($2 eq "S"){
+				$e = $s;
+			}elsif($2 eq "H"){
+				$e = $pos;
+			}
 		}else{
-			$dep = 0;
+			$s = $pos;
+			$e = $pos;
 		}
-		$t .= ";$num_fg/$dep";
-		if ( $boo and $dep >= $min_d  and $dep <= $max_d and $num_fg/$dep >= $ratio ){                               ############################Filtering 2#################
-			$boo = 1;
+		my $seq_len = length($seq);
+		$e = $e + $seq_len -1;
+		if($cig =~ /(\d+)H$/){
+			$e = $e+$1;
+		}
+		if(exists $pos_h{$id}){
+			push @{$pos_h{$id}},($s,$e);
 		}else{
-			$boo = 0;
+			$pos_h{$id} = [$s,$e];
 		}
 	}
-	
-	print OUT_R "$chr\t$s_p\t$e_p\t$t\n" if ($total >= $total_reads);
-	print OUT_F "$chr\t$s_p\t$e_p\t$t\n" if ($boo);
+
+	my $num_bg ; # the number of reads at bg
+	while (my($k,$v) = each %pos_h){
+		my ($h,$t) = (sort {$a<=>$b} @$v)[0,-1];
+		if ($h < $e_p and $t > $s_p){
+			$num_bg++;
+		}
+	}
+
+	print "$chr\t$s_p\t$e_p\t$t;$num_fg/$num_bg\n" if ( $sc > $tre and $num_fg/$num_bg );
+
 }
 
 sub deter_ord{

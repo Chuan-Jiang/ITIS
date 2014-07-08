@@ -5,14 +5,13 @@ use Bio::SeqIO;
 use Getopt::Std;
 
 my %opt;
-getopts("g:b:t:ho:l:",\%opt) ;
+getopts("g:t:o:h",\%opt) ;
 
 die "USAGE $0 
 	-g genome seq file
 	-t te seq file
-	-h help
 	-o out_put_file 
-	-l name of file conating pre existes homelogus_seq
+	-h help
 	" if ( $opt{h});
 
 my $seq_in = Bio::SeqIO -> new (-file => $opt{g},-format => "fasta");
@@ -26,14 +25,9 @@ while (my $seq_obj = $seq_in -> next_seq){
 }
 my %te = Seq::seq_hash($opt{t});
 
-print STDERR "making index for blastn\n";
-system ("makeblastdb -in=$opt{g} -dbtype='nucl'") == 0 or die $!;
-open BLA, "blastn -query $opt{t} -outfmt 6 -db $opt{g}|" or die $!;
-
-open LS, ">$opt{l}" or die $!;
+open BLA, "blastn -query $opt{t} -subject $opt{g} -outfmt 6 |" or die $!;
 while(<BLA>){
 	chomp;
-	print LS "$_\n";
 	my ($chr,$s,$e) = (split /\t/,$_)[1,8,9];
 	($s,$e) = sort {$a<=>$b}($s,$e);
 	my $l = $e-$s+1;
@@ -45,7 +39,7 @@ open OUT, ">$opt{o}" or die $!;
 foreach my $k ( @order){
 	print OUT ">$k\n$genome{$k}\n";
 }
-my ($te_n,$te_seq) = each (%te);
-print OUT ">$te_n\n$te_seq\n";
 
-
+foreach my $k(keys %te){
+	print OUT ">$k\n$te{$k}\n";
+}

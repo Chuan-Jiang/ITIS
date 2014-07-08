@@ -9,18 +9,19 @@ my $usage = "$0
 	-h : help message
 	-s : informative sam file
 	-g : genome file
-	-i : insertion size of library 
-	-t : the id of te seq
-	-p : the project name
+	-l : library insertion size
+	-n : the id of te seq
+	-p : 'directory/prefix' of your output files, relative to your working direcroty;
+		 this script generate two output files : '\$WD/directory/prefix.ins.loc.lst' and '\$WD/directory/prefix.supported.reads.sam
 	-r : tnt realian sam 
 	-d : debug mode on 
 ";
 
 die "$usage\n" if (@ARGV==0);
-getopts("hs:g:i:t:p:r:d",\%opts);
+getopts("hs:g:l:n:p:r:d",\%opts);
 
 if ($opts{h}){ print "$usage"; exit};
-my ($sam_file,$genome_file,$ins_size,$te) = ($opts{s},$opts{g},$opts{i},$opts{t});
+my ($sam_file,$genome_file,$ins_size,$te) = ($opts{s},$opts{g},$opts{l},$opts{n});
 my $project = $opts{p};
 
 
@@ -31,8 +32,8 @@ my %genomes = Seq::seq_hash($genome_file);
 my $tnt_len = length ($genomes{$te});  # transposon length
 
 ############# files used to sae results ##
-open OUT ,">${project}_ins_loc.lst" or die $!;
-open SUPP,">${project}_supported_reads.sam" or die $!;
+open OUT ,">${project}.ins.loc.lst" or die $!;
+open SUPP,">${project}.supported.reads.sam" or die $!;
 
 my $rds;
 my $rex_te = '^(\d+[SH]\d+M|\d+M|\d+M\d+[SH])$';   
@@ -94,22 +95,24 @@ foreach my $read (@aligns){
 		ge_end(%cors);
 	}
 	if ($tar_cig =~ /Z/){
-		# print "tar_cig_f:$read\n";
+		#print "Do nothing for tar_cig_f:$read\n";
 	}
 	if ($te_cig =~ /Z/){
-		# print "te_cig_f:$read\n";
+		#print "Do nothing for te_cig_f:$read\n";
 	}
 }
 
-#################### the mainbody of code ######################
+#################### the end of mainbody of code ######################
 
+
+#######    sub functions  #######
 my @rs;
 
-sub scan_sam{
+sub scan_sam{    # put the pair reads in to one element of one array @re
 	my $file = shift @_;
 	open my $fh , $file or die $!;
 	my %reads;
-	my @re;
+	my @re;   
 	while (<$fh>){
 		chomp;
 		if (/^@/){
@@ -132,7 +135,7 @@ sub scan_sam{
 }	
 
 
-sub find{
+sub find {     # this subroutine used to
 	my @reads = @_;
 	$rds = join "\n",@_; ## in order to print informative reads in one file 
 	
@@ -144,32 +147,34 @@ sub find{
 	
 	foreach my $it (@reads){
 		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9];	
-		(my $r = $flag ) =~ s/\w+(\d)s?/$1/;
-		my $p = ($chr =~ /$te/)?$te:"chr";
+		(my $r = $flag ) =~ s/\w+(\d)s?/$1/;    # read1? reads2?
+		my $p = ($chr =~ /$te/)?$te:"chr";		# on genome? on te?
 		$reads_hash{$r}{$p}{pos} = $pos;
 		$reads_hash{$r}{$p}{chr} = $chr;
 		$reads_hash{$r}{$p}{cig} = $cig;
 	}
 
 	##############determine the reads at tnt1#############
-	my %trans;  # select the most promising tnt reads
+	my %trans;  # select the most promising tnt reads on te
 	foreach my $it (@reads){
 		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9];
-		#print "$id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq\n";
 		(my $r = $flag ) =~ s/\w+(\d)s?/$1/;
 		my $pair = ($r == 1)?2:1;
 		my $rc = (($flag =~ /r/)? -1:1); 
 		
 		if (($chr =~ /$te/) and exists ($reads_hash{$pair}{chr} )){
 			
-			my $num_of_m;
+			my $num_of_m;                                         # check the number of matched base in reads aligned at TE
 			while ($cig =~ /(\d+)M/g){
 				$num_of_m += $1;
 			}
-			if (exists $trans{nm} and $trans{nm} > $num_of_m){
+
+			if (exists $trans{nm} and $trans{nm} > $num_of_m){     # reads at genome with long matched base is promising
 				next;
 			}
 			
+			# begin save the relationship  of promising reads in one hash %trans
+			# by the way the information used to test insertion saved in hash %cors
 			$trans{chr} = $chr;
 			$trans{nm} = $num_of_m;
 			$trans{nchr} = $reads_hash{$pair}{chr}{chr};
@@ -190,28 +195,29 @@ sub find{
 	
 	
 
-	################  if tnt have long ltr execute following code#############
+	################  if tnt have long ltr execute following code  to refine the posdion of reads on TE #############
 	if ($opts{r}){	
 		my $te_pos;
 		my $id = $cors{$te}{id};
 		my $seq = $cors{$te}{seq};
 		my $ha = $guanxi{$id}{$seq}; 
-		print "$id\t$seq\n" unless ($ha);
-		my %rela = %$ha;
-		if ($cors{$te}{direc} == 1){
-			($te_pos) = (sort {$a<=>$b} keys %rela)[-1];
-		}else{
-			($te_pos) = (sort {$a<=>$b} keys %rela)[0];
+		if ($ha){
+			my %rela = %$ha;
+			if ($cors{$te}{direc} == 1){
+				($te_pos) = (sort {$a<=>$b} keys %rela)[-1];
+			}else{
+				($te_pos) = (sort {$a<=>$b} keys %rela)[0];
+			}
+			my $te_cig = $rela{$te_pos};
+			my $te_cs = cigar($te_cig);
+			$cors{$te}{pos} = $te_pos;          # only pos and cig may be refined
+			$cors{$te}{cig} = $te_cs;
 		}
-		my $te_cig = $rela{$te_pos};
-		my $te_cs = cigar($te_cig);
-		$cors{$te}{pos} = $te_pos;
-		#print "$te_cig\t$te_cs\n";
-		$cors{$te}{cig} = $te_cs;
 	}
 
 
-	############## collect information of reads at genome###############
+	############## collect information of paired read at genome###############
+	
 	foreach my $it (@reads){
 		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9]; 
 		my $rc = (($flag =~ /r/)? -1:1);    # -1 antisense   and 1 means sense strand
@@ -230,6 +236,8 @@ sub find{
 	return (\%cors,\%reads_hash);
 }
 
+=head 
+this part of code is useless
 sub comp{
 	my ($ori,$ref) = @_;
 	my @reads = @$ref;
@@ -249,7 +257,7 @@ sub comp{
 	}
 	return $va;
 }
-
+=cut
 
 sub cigar {
 	my $cig = shift @_;
@@ -264,13 +272,13 @@ sub cigar {
 		$len += $n;
 		$m_l += $1 if ($c eq "M");
 	}
-	if ($m_l/$len > 0.9 ){
+	if ($m_l/$len > 95/100  ){     #  matcha and mismatch > 0.95 ; it will be considered as totally matched reads
 		$cs = "M";
 	}else{
-		if ( $cig =~ /^(\d+)[SH]/ and $1 >= 10){
+		if ( $cig =~ /^(\d+)[SH]/ and $1 >= 5){
 			$cs .= "S:$1";
 		}
-		if ( $cig =~ /(\d+)[SH]$/ and $1 >= 10){
+		if ( $cig =~ /(\d+)[SH]$/ and $1 >= 5){
 			$cs .= "E:$1";
 		}
 	}
@@ -284,10 +292,10 @@ sub cross {
 		my ($ins_direc,$jun);
 		if ($cors{tar}{direc} == 1){
 			$ins_direc = "R";
-			$jun = $cors{tar}{pos} + length ($cors{tar}{seq});
+			$jun = $cors{tar}{pos} + length ($cors{tar}{seq});  # assume the ins site is the end of match of reads at genome
 		}else{
 			$ins_direc = "S";
-			$jun = $cors{tar}{pos};
+			$jun = $cors{tar}{pos};                            # assume the ins site at the start of match of read at genome
 		}
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE\n";
 		print SUPP "$rds\n";
