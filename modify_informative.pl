@@ -5,20 +5,20 @@ use Seq;
 
 my %reads;
 open my $fh, "samtools view -h -S -X $diff_file|" or die $!;
+
 while (<$fh>){
+	my @pairs;
 	chomp;
 	if (/^@/){
 		print "$_\n";
 		next;
 	}
 	my ($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$_)[0,1,2,3,4,5,6,7,9];
-	if (! keys %reads){
-		$reads{$id} = "$_";
-	}elsif( exists $reads{$id}){
-		$reads{$id} .= "############$_";
+	if (! keys %reads or exists $reads{$id}){
+		push @{$reads{$id}},$_; 
 	}else{
 		my ($g) = values %reads;
-		my @hits = split /############/,$g;
+		my @hits = @$g;
 		my %seq_ha;
 		my %qua_ha;
 
@@ -58,7 +58,7 @@ while (<$fh>){
 
 		################## END ####################
 		undef(%reads);
-		$reads{$id} = "$_";
+		push @{$reads{$id}}, $_;
 
 	}
 }

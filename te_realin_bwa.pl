@@ -22,13 +22,17 @@ my ($te,$file) = ($opt{n},$opt{s});
 open my $fh, $file or die $!;
 my $tmp = "tmp_bwa".time();
 open my $out, ">$tmp" or die $!;
+
+my $exi = 1;
 while (<$fh>){
 	chomp;
 	my ($id,$r,$chr,$seq)  = (split /\t/,$_)[0,1,2,9];	
-	$r =~ s/.*(\d)/$1/;
+	#$r =~ s/.*(\d)/$1/;
+	
 	if ($chr =~ /$te/  ){
 		my $q = "J"x(length($seq));
-		print $out "\@$id\n$seq\n\+\n$q\n";
+		print $out "\@$id:$exi\n$seq\n\+\n$q\n";
+		$exi ++;
 	}
 }
 

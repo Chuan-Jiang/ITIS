@@ -54,8 +54,10 @@ for (my $i = 0;;){
 	my @clu;
 	my $step ;
 	push @clu,$sites[$i];        #  $i the the start point of one string of pos
-
+	
 	###############  detect a strint of pos at genome #################
+	
+	my($id_o,$dir_o,$chr_o,$pos_o,$ty_o) = split /\t/,$sites[$i];
 	for (my $j =1;;$j++){               # step in to  the next ins pos
 		$step = $j;
 		my $pre = $i + $j -1;                  
@@ -64,6 +66,7 @@ for (my $i = 0;;){
 		my ($id_p,$dir_p,$chr_p,$pos_p,$ty_p) = split /\t/,$sites[$pre];
 		my ($id_n,$dir_n,$chr_n,$pos_n,$ty_n) = split /\t/,$sites[$nex];
 		
+	
 		
 		my $win_s;  # determine using which window step
 		if ($ty_p =~ /C/ and $ty_n =~ /C/){
@@ -74,7 +77,8 @@ for (my $i = 0;;){
 			$win_s = $window;
 		}
 				
-		if (($dir_p eq $dir_n ) and  ($chr_p eq $chr_n ) and  (($pos_n - $pos_p ) <= $win_s)){
+		
+		if (($dir_p eq $dir_n or $dir_n eq "NA" or $dir_p eq "NA") and  ($chr_p eq $chr_n ) and  (($pos_n - $pos_p ) <= $win_s)){
 			push @clu,$sites[$nex];       # @clu have a cluster of support reads each within a window 50bp
 		}else{
 			last;

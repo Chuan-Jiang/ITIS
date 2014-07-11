@@ -40,28 +40,46 @@ my $rex_te = '^(\d+[SH]\d+M|\d+M|\d+M\d+[SH])$';
 
 ############ parsing the te realn sam file ##### because TE have LTRs at both end
 my %guanxi;
+my %te_rcd;
 if ($opts{r}){
 	open my $fh, "samtools view -S -X $opts{r}|"  or die $!;
 	my $l_seq;
+	my $l_as;
 	while (<$fh>){
 		chomp;
-		my ($id,$flag,$pos,$cig,$seq,$nm) = (split /\t/,$_)[0,1,3,5,9,11];
-		if ($nm =~ /NM:i:[^0]/){
-			$cig = "*";
-		}
-		next if ($flag =~ /r/);
-		if ($seq =~ /\*/){
-			$seq = $l_seq;
-		}else{
+		my ($id,$flag,$pos,$cig,$seq,$tags) = (split /\t/,$_,12)[0,1,3,5,9,11];
+		#print "$id,$flag,$pos,$cig,$seq,$tags\n";
+		#($id) = $id =~ /(.+)\:\d+$/;	
+			
+		my $direc = ($flag =~ /r/)?-1:1;
+		$seq = Seq::rev_com($seq) if ( $direc == -1);
+		my ($as) = $tags =~ /AS:i:(\d+)/;  
+		
+		unless($te_rcd{$id}){
 			$l_seq = $seq;
+			$l_as = $as;
+			$te_rcd{$id} = 1;
 		}
-		$guanxi{$id}{$seq}{$pos} = $cig;
+		if ($cig =~ /H/ or $seq =~ /\*/){
+			$seq = $l_seq;
+		}
+		next unless ($cig =~ /^\dM|\dM$/ );	
+		next if ( $l_as - $as >  5);
+		
+		$cig = cigar($cig);
+		
+		($id) = $id =~ /(.+)\:\d+$/;
+		$guanxi{$id}{$seq}{$direc}{$pos} = $cig;
+		print "$id\t$seq\t$direc\t$pos\t$cig\n";
+
 	}
 }
 ###########################################################
 ################ the mainbody of code######################
 ###########################################################
 ###########################################################
+
+
 
 
 my @aligns = scan_sam ($sam_file);
@@ -198,21 +216,24 @@ sub find {     # this subroutine used to
 	################  if tnt have long ltr execute following code  to refine the posdion of reads on TE #############
 	if ($opts{r}){	
 		my $te_pos;
+		my $te_cs;
 		my $id = $cors{$te}{id};
 		my $seq = $cors{$te}{seq};
-		my $ha = $guanxi{$id}{$seq}; 
-		if ($ha){
-			my %rela = %$ha;
+		my $ha_f = $guanxi{$id}{$seq}{1};
+		#$ha_b = $guanxi{$id}{$seq}{-1};
+		if ($ha_f){
+			my %rela = %$ha_f;
 			if ($cors{$te}{direc} == 1){
 				($te_pos) = (sort {$a<=>$b} keys %rela)[-1];
+				$te_cs = $rela{$te_pos};
 			}else{
 				($te_pos) = (sort {$a<=>$b} keys %rela)[0];
+				$te_cs = $rela{$te_pos};
 			}
-			my $te_cig = $rela{$te_pos};
-			my $te_cs = cigar($te_cig);
 			$cors{$te}{pos} = $te_pos;          # only pos and cig may be refined
 			$cors{$te}{cig} = $te_cs;
 		}
+		$cors{$te}{ori} = "NA" if ($guanxi{$id}{$seq}{-1});
 	}
 
 
@@ -297,6 +318,7 @@ sub cross {
 			$ins_direc = "S";
 			$jun = $cors{tar}{pos};                            # assume the ins site at the start of match of read at genome
 		}
+		$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE\n";
 		print SUPP "$rds\n";
 	}elsif ( $cors{$te}{direc} == -1  and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))){
@@ -308,6 +330,7 @@ sub cross {
 			$ins_direc = "R";
 			$jun = $cors{tar}{pos};
 		}
+		$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCS\n";
 		print SUPP "$rds\n";
 	}else{
@@ -336,6 +359,7 @@ sub te_start{
 				
 				if($jun != -1 and $diff/$l < 0.05){
 					$jun = $jun + $pos_t+ $l -1 ;
+					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
 					print SUPP "$rds\n";
 				}
@@ -348,6 +372,7 @@ sub te_start{
 
 				if($jun != -1 and $diff/$l < 0.05){
 					$jun = $jun + $sub_start ;
+					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
 					print SUPP "$rds\n";
 				}	
@@ -382,6 +407,7 @@ sub te_end{
 				
 				if( $jun != -1 and $diff/$l <0.05 ){
 					$jun = $jun + $pos_t + $l -1 ;
+					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
 					print SUPP "$rds\n";
 				}
@@ -394,6 +420,7 @@ sub te_end{
 
 				if($jun != -1 and $diff/$l < 0.05 ){
 					$jun = $jun + $sub_start;
+					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
 					print SUPP "$rds\n";
 				}
@@ -428,11 +455,13 @@ sub ge_start{
 			if (abs($ma) == 3){
 				my $ins_direc = "S";
 				my $jun  = $cors{tar}{pos} - $adj;
+				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\n";
 				print SUPP "$rds\n";
 			}elsif(abs ( $ma )== 2 ) {
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + $adj ;
+				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\n";
 				print SUPP "$rds\n";
 			}
@@ -463,11 +492,13 @@ sub ge_end{
 			if (abs($ma) == 3){
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1+$adj;
+				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\n";
 				print SUPP "$rds\n";
 			}elsif ( abs($ma) == 2 ){
 				my $ins_direc = "S";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1-$adj;
+				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\n";
 				print SUPP "$rds\n";
 			}
@@ -524,3 +555,11 @@ sub match {
 	}
 }
 
+sub count_m {
+	my $cig = shift @_;
+	my $num;
+	while($cig =~ /(\d+)M/g){
+		$num += $1;
+	}
+	return $num;
+}
