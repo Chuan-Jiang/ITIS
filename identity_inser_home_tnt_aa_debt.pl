@@ -3,8 +3,9 @@ use warnings; use strict;
 use Seq;
 use Getopt::Std;
 
-my %opts;
 
+########## get parameters #################
+my %opts;
 my $usage = "$0
 	-h : help message
 	-s : informative sam file
@@ -19,9 +20,10 @@ my $usage = "$0
 
 die "$usage\n" if (@ARGV==0);
 getopts("hs:g:l:n:p:r:d",\%opts);
-
 if ($opts{h}){ print "$usage"; exit};
+
 my ($sam_file,$genome_file,$ins_size,$te) = ($opts{s},$opts{g},$opts{l},$opts{n});
+my $sam_te = $opts{r};
 my $project = $opts{p};
 
 
@@ -31,71 +33,60 @@ my $project = $opts{p};
 my %genomes = Seq::seq_hash($genome_file);
 my $tnt_len = length ($genomes{$te});  # transposon length
 
-############# files used to sae results ##
+
+
+############# files used to save results ##
 open OUT ,">${project}.ins.loc.lst" or die $!;
 open SUPP,">${project}.supported.reads.sam" or die $!;
 
-my $rds;
-my $rex_te = '^(\d+[SH]\d+M|\d+M|\d+M\d+[SH])$';   
 
 ############ parsing the te realn sam file ##### because TE have LTRs at both end
-my %guanxi;
-my %te_rcd;
-if ($opts{r}){
-	open my $fh, "samtools view -S -X $opts{r}|"  or die $!;
-	my $l_seq;
-	my $l_as;
-	while (<$fh>){
-		chomp;
-		my ($id,$flag,$pos,$cig,$seq,$tags) = (split /\t/,$_,12)[0,1,3,5,9,11];
-		#print "$id,$flag,$pos,$cig,$seq,$tags\n";
-		#($id) = $id =~ /(.+)\:\d+$/;	
-			
-		my $direc = ($flag =~ /r/)?-1:1;
-		$seq = Seq::rev_com($seq) if ( $direc == -1);
-		my ($as) = $tags =~ /AS:i:(\d+)/;  
-		
-		unless($te_rcd{$id}){
-			$l_seq = $seq;
-			$l_as = $as;
-			$te_rcd{$id} = 1;
-		}
-		if ($cig =~ /H/ or $seq =~ /\*/){
-			$seq = $l_seq;
-		}
-		next unless ($cig =~ /^\dM|\dM$/ );	
-		next if ( $l_as - $as >  5);
-		
-		$cig = cigar($cig);
-		
-		($id) = $id =~ /(.+)\:\d+$/;
-		$guanxi{$id}{$seq}{$direc}{$pos} = $cig;
-		print "$id\t$seq\t$direc\t$pos\t$cig\n";
 
-	}
+my %guanxi = te_aln($sam_te); 
+
+=head
+my $che = $guanxi{"SRR823377.1286498:1"};
+print "@$che\n";
+my $ch = $guanxi{"SRR823377.1286498:2"};
+print "@$ch\n";
+
+foreach( keys%guanxi){
+	#print "K:$_\n";	
+	my $v = $guanxi{$_};
+	print "@$v\n";
 }
+=cut
+
+
+
+
 ###########################################################
 ################ the mainbody of code######################
 ###########################################################
 ###########################################################
-
-
-
-
 my @aligns = scan_sam ($sam_file);
-foreach my $read (@aligns){
-	my @hits = @$read;
-	my ($co,$r_h) = find (@hits );
-	next if ($co == 0);
-	my %cors = %$co;
 
+=test scan_sam
+foreach my $it ( @aligns){
+	print "@$it\n";
+}
+=cut
+
+my $rds;
+foreach my $grp (@aligns){  # parse each group of reads
+	my %cors;
+	my @hits = @$grp;
+	$rds = join "\n",@hits;
+	my %te_ha = read_2_ha($hits[0] );
+	$cors{$te} = \%te_ha;
+	my %chr_ha = read_2_ha($hits[1] );
+	$cors{tar} = \%chr_ha;
+
+	
+	#print "THERE :$rds\n";
 	my $tar_cig = $cors{tar}{cig};
 	my $te_cig = $cors{$te}{cig}; 
 	
-	unless ($tar_cig and $te_cig){
-		print "can not determine the pairs\n";
-		die;
-	}
 
 	if ( $tar_cig =~ /M/ and $te_cig =~ /M/){
 		cross(%cors);
@@ -119,17 +110,70 @@ foreach my $read (@aligns){
 		#print "Do nothing for te_cig_f:$read\n";
 	}
 }
-
 #################### the end of mainbody of code ######################
 
 
+
+
+
 #######    sub functions  #######
-my @rs;
+sub te_aln{
+	my $sam_te = shift @_;	
+	
+	my %guanxi;
+	my %te_rcd;
+	open my $fh, "samtools view -S -X $sam_te|"  or die $!;
+	my $l_seq;
+	my $l_as;
+	while (<$fh>){
+		chomp;
+		my @ar  = (split /\t/,$_,12);
+		my ($id,$flag,$pos,$cig,$seq,$tags) = @ar[0,1,3,5,9,11];
+		
+		my $direc = ($flag =~ /r/)?-1:1;
+		my ($as) = $tags =~ /AS:i:(\d+)/;  
+
+		## firstly, save the full infor to $l_seq and $l_as	
+		unless($te_rcd{$id}){
+			$guanxi{$id} = [];
+			if ($direc == -1){
+				$l_seq = Seq::rev_com($seq);
+			}else{
+				$l_seq = $seq;
+			}
+			$l_as = $as;
+			$te_rcd{$id} = 1;
+		}
+		
+		if($direc == -1){
+			$seq = Seq::rev_com($l_seq);
+		}else{
+			$seq = $l_seq;
+		}
+		$ar[9] = "$seq";
+		my $p = join "\t", @ar;
+			
+		if ($cig =~ /^\d+M$/){
+			push @{$guanxi{$id}}, $p;
+		}elsif($cig =~ /^\d+M(\d+)[SH]$/){
+			if (abs(($pos + length($l_seq) - $1 -1) - $tnt_len) < 2){
+				push @{$guanxi{$id}} ,$p;
+			}
+		}elsif($cig =~ /^\d+[SH]\d+M$/){
+			if (abs ($pos) < 2){
+				push @{$guanxi{$id}} , $p;
+			}
+		}
+	}
+	return %guanxi;
+}
+	
+	
 
 sub scan_sam{    # put the pair reads in to one element of one array @re
 	my $file = shift @_;
 	open my $fh , $file or die $!;
-	my %reads;
+	
 	my @re;   
 	while (<$fh>){
 		chomp;
@@ -137,148 +181,38 @@ sub scan_sam{    # put the pair reads in to one element of one array @re
 			print SUPP "$_\n";
 			next;
 		}
-		my $id = (split /\t/,$_)[0];
-		if(! keys %reads or exists $reads{$id}){
-			push @rs, $_;
-			$reads{$id} = "1";
-		}else{
-			my @g  =  @rs;
-			push @re,[@g];
-			undef(%reads);
-			$reads{$id} = "1";
-			@rs = ($_);
+		my($id,$flag,$chr) = (split /\t/,$_)[0,1,2];
+		next if ( $chr =~ /$te/);
+
+		my $r = ($flag =~ /1/)?1:2;
+		$_ =~ s/$id\t/$id:$r\t/;
+		my $r_a_t = ($r =~ /2/)?1:2;
+		
+		if(   defined $guanxi{"$id:$r_a_t"}){
+			foreach my $te_aln (@{$guanxi{"$id:$r_a_t"}}){
+				print "$te_aln\n$_\n" if ($id eq "SRR823377.1286498");
+				push @re, [$te_aln,$_] unless ($chr =~ $te);
+			}
 		}
 	}
 	return @re;
 }	
 
-
-sub find {     # this subroutine used to
-	my @reads = @_;
-	$rds = join "\n",@_; ## in order to print informative reads in one file 
-	
+sub read_2_ha{     # this subroutine used to
 	my %cors;
-		
-	################# put reads in hash #########
-
-	my %reads_hash;
-	
-	foreach my $it (@reads){
-		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9];	
-		(my $r = $flag ) =~ s/\w+(\d)s?/$1/;    # read1? reads2?
-		my $p = ($chr =~ /$te/)?$te:"chr";		# on genome? on te?
-		$reads_hash{$r}{$p}{pos} = $pos;
-		$reads_hash{$r}{$p}{chr} = $chr;
-		$reads_hash{$r}{$p}{cig} = $cig;
-	}
-
-	##############determine the reads at tnt1#############
-	my %trans;  # select the most promising tnt reads on te
-	foreach my $it (@reads){
-		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9];
-		(my $r = $flag ) =~ s/\w+(\d)s?/$1/;
-		my $pair = ($r == 1)?2:1;
-		my $rc = (($flag =~ /r/)? -1:1); 
-		
-		if (($chr =~ /$te/) and exists ($reads_hash{$pair}{chr} )){
-			
-			my $num_of_m;                                         # check the number of matched base in reads aligned at TE
-			while ($cig =~ /(\d+)M/g){
-				$num_of_m += $1;
-			}
-
-			if (exists $trans{nm} and $trans{nm} > $num_of_m){     # reads at genome with long matched base is promising
-				next;
-			}
-			
-			# begin save the relationship  of promising reads in one hash %trans
-			# by the way the information used to test insertion saved in hash %cors
-			$trans{chr} = $chr;
-			$trans{nm} = $num_of_m;
-			$trans{nchr} = $reads_hash{$pair}{chr}{chr};
-			$trans{pos}  = $pos;
-			$trans{npos} = $reads_hash{$pair}{chr}{pos};
-			
-			$cors{$te}{seq} = $seq;
-			$cors{$te}{id} = $id;
-			$cors{$te}{direc} = $rc;
-			$cors{$te}{pos} = $pos;
-			$cors{$te}{cig} = cigar($cig);
-		}	
-	}
-	
-	######### save  pair alignment ###########
-	############################################
-	############################################
-	
-	
-
-	################  if tnt have long ltr execute following code  to refine the posdion of reads on TE #############
-	if ($opts{r}){	
-		my $te_pos;
-		my $te_cs;
-		my $id = $cors{$te}{id};
-		my $seq = $cors{$te}{seq};
-		my $ha_f = $guanxi{$id}{$seq}{1};
-		#$ha_b = $guanxi{$id}{$seq}{-1};
-		if ($ha_f){
-			my %rela = %$ha_f;
-			if ($cors{$te}{direc} == 1){
-				($te_pos) = (sort {$a<=>$b} keys %rela)[-1];
-				$te_cs = $rela{$te_pos};
-			}else{
-				($te_pos) = (sort {$a<=>$b} keys %rela)[0];
-				$te_cs = $rela{$te_pos};
-			}
-			$cors{$te}{pos} = $te_pos;          # only pos and cig may be refined
-			$cors{$te}{cig} = $te_cs;
-		}
-		$cors{$te}{ori} = "NA" if ($guanxi{$id}{$seq}{-1});
-	}
-
-
-	############## collect information of paired read at genome###############
-	
-	foreach my $it (@reads){
-		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9]; 
-		my $rc = (($flag =~ /r/)? -1:1);    # -1 antisense   and 1 means sense strand
-		(my $r = $flag ) =~ s/\w+(\d)/$1/;
-		my $cs = cigar($cig);
-		#### select informative reads######
-		if ($chr eq $trans{nchr} and ($pos == $trans{npos})){
-			$cors{tar}{cig} = $cs;       # simplified cigar: M S E Z
-			$cors{tar}{direc} = $rc;      # reads direction
-			$cors{tar}{id} = $id;	       # read id 
-			$cors{tar}{pos} = $pos;       ### when reads if reverse complement the start loc of reads should plus the length of reads
-			$cors{tar}{seq} = $seq ;
-			$cors{tar}{chr} = $chr;
-		}
-	}
-	return (\%cors,\%reads_hash);
+	my $hit =shift  @_;
+	my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$hit)[0,1,2,3,4,5,6,7,9];
+	my $rc = (($flag =~ /r/)? -1:1);
+	my $cs = cigar($cig);
+	($id,my $r) = $id =~ /(.+)\:(\d)$/;
+	$cors{cig} = $cs;
+	$cors{direc} = $rc;
+	$cors{id} = $id;
+	$cors{pos} = $pos;
+	$cors{seq} = $seq;
+	$cors{chr} = $chr;
+	return %cors;
 }
-
-=head 
-this part of code is useless
-sub comp{
-	my ($ori,$ref) = @_;
-	my @reads = @$ref;
-	#### if are hard clipped, exacute following code to get the full sequence  at tnt#######
-	my $va;
-	foreach my $it (@reads){
-		my($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$it)[0,1,2,3,4,5,6,7,9];	
-		(my $r = $flag ) =~ s/\w+(\d)/$1/;  #  which reads   1 or 2 ?????
-		my $rc = (($flag =~ /r/)? -1:1);    # -1 antisense   and 1 means sense strand
-
-		my $test_n = (($cig !~ /H/)?$r*$rc:0);
-		if (abs($ori)== abs ($test_n) and ($ori)*($test_n) > 0){
-			$va = $seq;
-		}elsif(abs($ori)== abs ($test_n)  and ($ori)*($test_n) < 0){
-			$va = Seq::rev_com($seq);
-		}
-	}
-	return $va;
-}
-=cut
 
 sub cigar {
 	my $cig = shift @_;
@@ -310,6 +244,11 @@ sub cigar {
 sub cross {
 	my %cors = @_;
 	if ( $cors{$te}{direc} == 1 and $cors{$te}{pos} > ($tnt_len - $ins_size)){
+		
+		#   ---------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>------------------------------
+		#                                                               ----->    <--------
+		#   ----------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<------------------------------
+		#                 -------->       <------
 		my ($ins_direc,$jun);
 		if ($cors{tar}{direc} == 1){
 			$ins_direc = "R";
@@ -322,6 +261,13 @@ sub cross {
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE\n";
 		print SUPP "$rds\n";
 	}elsif ( $cors{$te}{direc} == -1  and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))){
+		
+		#   ---------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>------------------------------
+		#                   -------->       <--------
+		#
+		#   ----------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<------------------------------
+		#                                                                ------>	<-----
+       		
 		my ($ins_direc,$jun);
 		if ( $cors{tar}{direc} == 1 ){
 			$ins_direc = "S";
@@ -341,6 +287,12 @@ sub cross {
 sub te_start{
 	my %cors = @_;
 	if($cors{$te}{cig} =~ /S:(\d+)/ and $cors{$te}{direc} == -1 ){
+		# ---------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>------------------------------
+		#             ------->     <-------
+		#
+		# --------------------------- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<------------------------------
+		#                                                                 ------->   <-----
+		
 		my $l = $1;
 		if ($cors{$te}{pos} <=2 ){
 			my $que = substr($cors{$te}{seq},0,$l);
@@ -359,7 +311,6 @@ sub te_start{
 				
 				if($jun != -1 and $diff/$l < 0.05){
 					$jun = $jun + $pos_t+ $l -1 ;
-					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
 					print SUPP "$rds\n";
 				}
@@ -372,7 +323,6 @@ sub te_start{
 
 				if($jun != -1 and $diff/$l < 0.05){
 					$jun = $jun + $sub_start ;
-					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
 					print SUPP "$rds\n";
 				}	
@@ -388,6 +338,12 @@ sub te_start{
 sub te_end{
 	my %cors = @_;
 	if ($cors{$te}{cig} =~ /E:(\d+)/ and $cors{$te}{direc} == 1){
+
+		#---------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>-------------------------------
+		#                                                      -------->     <-------
+		#
+		#----------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<-------------------------------
+		#                ------>  <--------      
 		my $l = $1;
 		my $end_pos = $cors{$te}{pos} + length($cors{$te}{seq}) - $l;
 		if ($end_pos >= $tnt_len-10 ){
@@ -407,7 +363,6 @@ sub te_end{
 				
 				if( $jun != -1 and $diff/$l <0.05 ){
 					$jun = $jun + $pos_t + $l -1 ;
-					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
 					print SUPP "$rds\n";
 				}
@@ -420,7 +375,6 @@ sub te_end{
 
 				if($jun != -1 and $diff/$l < 0.05 ){
 					$jun = $jun + $sub_start;
-					$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
 					print SUPP "$rds\n";
 				}
@@ -437,7 +391,13 @@ sub te_end{
 
 sub ge_start{
 	my %cors = @_;
-	if($cors{tar}{cig} =~ /S:(\d+)/){
+	if($cors{tar}{cig} =~ /S:(\d+)/ ){
+		#  --------------------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>-------------------------------------------------
+		#                                                        --------->       <---------
+		#
+		#
+		#  ---------------------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<-------------------------------------------------
+		#                                                         -------->        <----------  
 		my $l = $1;
 		my $que = substr($cors{tar}{seq},0,$l);
 		( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
@@ -445,28 +405,23 @@ sub ge_start{
 		my $sub_h = "NNNNN".substr($genomes{$te},0,$l+5);
 		my $sub_t = substr($genomes{$te},-($l+5))."NNNNN";
 		
-		my ($ma,$loc) = match($que,$que_r,$sub_h,$sub_t);
-		if ($ma != 0){
-			my $adj;
-			if ($loc >= 0){
-				$adj = $loc -5;
-			}
-
-			if (abs($ma) == 3){
+		my %ma_hash = match($que,$que_r,$sub_h,$sub_t);	
+		if  (%ma_hash){
+			if ($ma_hash{3}  and $cors{$te}{direc} == 1 and $cors{$te}{pos} > ($tnt_len - $ins_size)  ){
+				my $adj = $ma_hash{3} - 5;
 				my $ins_direc = "S";
 				my $jun  = $cors{tar}{pos} - $adj;
-				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\n";
 				print SUPP "$rds\n";
-			}elsif(abs ( $ma )== 2 ) {
+			}elsif($ma_hash{-2}  and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))) {
+				my $adj = $ma_hash{-2} -5 ;
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + $adj ;
-				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\n";
 				print SUPP "$rds\n";
 			}
 		}else{
-			print "ge_start_mism:$cors{tar}{id}\t$ma:$que\t$que_r\n"if ($opts{d});
+			print "ge_start_mism:$cors{tar}{id}:$que\t$que_r\n"if ($opts{d});
 		}
 	}
 }
@@ -474,6 +429,13 @@ sub ge_start{
 sub ge_end{
 	my %cors = @_;
 	if($cors{tar}{cig} =~ /E:(\d+)/){
+	
+		#  --------------------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>-------------------------------------------------
+		#                                    --------->       <---------
+		#
+		#
+		#  ---------------------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<-------------------------------------------------
+		#                                     -------->        <----------  
 		my $l = $1;
 				
 		my $que = substr($cors{tar}{seq},-$l);
@@ -482,23 +444,19 @@ sub ge_end{
 		my $sub_h = "NNNNN".substr($genomes{$te},0,$l+5);
 		my $sub_t = substr($genomes{$te},-($l+5))."NNNNN";
 		
-		my ($ma,$loc) = match($que,$que_r,$sub_h,$sub_t);
-		if ($ma != 0){
-			my $adj;
-			if ($loc >= 0){
-				$adj = $loc -5;
-			}
-
-			if (abs($ma) == 3){
+		my %ma_hash = match($que,$que_r,$sub_h,$sub_t);
+		if (%ma_hash){
+			
+			if ( $ma_hash{-3} and $cors{$te}{direc} == 1 and $cors{$te}{pos} > ($tnt_len - $ins_size)){
+				my $adj = $ma_hash{-3} - 5;
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1+$adj;
-				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\n";
 				print SUPP "$rds\n";
-			}elsif ( abs($ma) == 2 ){
+			}elsif ( $ma_hash{2} and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))){
+				my $adj = $ma_hash{2} - 5;
 				my $ins_direc = "S";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1-$adj;
-				$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\n";
 				print SUPP "$rds\n";
 			}
@@ -538,18 +496,17 @@ sub match {
 			my ($diff,$loc) = mat($que,$sub);
 			my $ratio = $diff/(length $que);
 			my $direc = ($j==0?1:-1);
-			$relas{$ratio}{direc} = $direc*$k;
-			$relas{$ratio}{loc} = $loc;
+			
+			my $dir_pos  = $direc * $k;	
+			$relas{$ratio}{$dir_pos} = $loc   # head of tail of sequence matched
 		}
 	}
 	
-	foreach (sort {$a<=>$b} keys %relas){
+	foreach (sort {$a<=>$b} keys %relas){	
 		if ( $_ <= 0.05){
-			my $v = $relas{$_}{direc};
-			my $loc = $relas{$_}{loc};
-			return ($v,$loc);   #### return value SH  ST RH  RT  
-		}else{
-			return (0,-1);
+			my $v = $relas{$_};
+			my %m_h = %$v;
+			return (%m_h);   #### return value SH  ST RH  RT  
 		}
 		last;
 	}
