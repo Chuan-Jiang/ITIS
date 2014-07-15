@@ -46,59 +46,69 @@ open INS,$ins_file or die $!;
 open OUT_F, ">$proj.filtered.bed" or die $!;
 open OUT_R, ">$proj.raw.bed" or die $!; 
 
-chomp (my @sites = <INS>);   # put all sorted ins_file in in array
 
-my @list;    # contain all the support reads  list without filtered
+my($chr_r,$pos_r,$dir_r);
+my %rcder;
+my @clus;
+my %dirs;
 
-for (my $i = 0;;){
-	my @clu;
-	my $step ;
-	push @clu,$sites[$i];        #  $i the the start point of one string of pos
-	
-	###############  detect a strint of pos at genome #################
-	
-	my($id_o,$dir_o,$chr_o,$pos_o,$ty_o) = split /\t/,$sites[$i];
-	for (my $j =1;;$j++){               # step in to  the next ins pos
-		$step = $j;
-		my $pre = $i + $j -1;                  
-		my $nex = $i + $j;
-		last if ($nex >= @sites);	
-		my ($id_p,$dir_p,$chr_p,$pos_p,$ty_p) = split /\t/,$sites[$pre];
-		my ($id_n,$dir_n,$chr_n,$pos_n,$ty_n) = split /\t/,$sites[$nex];
+while(<INS>){
+	chomp;
+	my ($id,$dir,$chr,$pos,$ty) = split /\t/;
+
+	my $win_s;# determine using which window step
+
+	if(! %rcder ){
+		$rcder{chr} = $chr;
+		$rcder{pos} = $pos;
+		$rcder{ty} = $ty;
 		
-	
-		
-		my $win_s;  # determine using which window step
-		if ($ty_p =~ /C/ and $ty_n =~ /C/){
-			$win_s = $window ;
-		}elsif($ty_p =~ /G|T/ and $ty_n =~ /G|T/){
-			$win_s = 20;
-		}else{
-			$win_s = $window;
-		}
-				
-		
-		if (($dir_p eq $dir_n or $dir_n eq "NA" or $dir_p eq "NA") and  ($chr_p eq $chr_n ) and  (($pos_n - $pos_p ) <= $win_s)){
-			push @clu,$sites[$nex];       # @clu have a cluster of support reads each within a window 50bp
-		}else{
-			last;
-		}
+		$dirs{$dir} ++;
+		push @clus,$_;
+		next;
 	}
 
-	############### use subfunction to determine if there is a TE insertion site ###
-	bed(@clu);
-	###############   end   #########################
 
+	if ($ty=~ /C/ and $rcder{ty} =~ /C/){
+		$win_s = $window ;
+	}elsif($ty =~ /G|T/ and  $rcder{ty} =~ /G|T/){
+		$win_s = 20 ;
+	}else{
+		$win_s = $window;
+	}
 	
-	$i = $i + $step;
-	last if ($i >= @sites);
+	if(($chr eq $rcder{chr}) and ($pos - $rcder{pos} <= $win_s)){
+		push @clus,$_;
+	}else{
+		bed(\@clus,\%dirs);
+		undef(%dirs);
+		undef(%rcder) ;
+		undef(@clus);
+	}
 }
 
 
 
 sub bed{          # use a cluster of support reads to determine if it is a ture TE insertion
+
+	my @clu =  @{$_[0]};
+	my %dirs = %{$_[1]};
+	my $dir;
+
+	if ($dirs{S} and $dirs{R}){	
+		if($dirs{S}/$dirs{R} > 0.8){
+			$dir = "S";
+		}elsif( $dirs{R}/$dirs{S} > 0.8){
+			$dir = "R";
+		}else{
+			$dir = "N";
+		}
+	}else{
+		($dir) = keys %dirs;
+	}
 	
-	my @clu = @_;
+	my @ppp = %dirs;
+
 	my $sc = scalar @clu;      # $sc    :     the number of support reads
 	my %sites;   # contain all start and end site
 
@@ -108,9 +118,9 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	my @rou_e;	 # uncertain end site
 	
 	my %in_ha;
-	my ($id,$dir,$chr,$pos,$ty);
+	my ($id,$d,$chr,$pos,$ty);
 	foreach my $pos (@clu){
-		($id,$dir,$chr,$pos,$ty) = split /\t/,$pos;
+		($id,$d,$chr,$pos,$ty) = split /\t/,$pos;
 		$in_ha{$id} ++;
 		if ($ty =~ /GS|TS/ ){
 			push @sit_s,$pos;
@@ -148,7 +158,7 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	
 	my $boo = 0;
 
-	if ($total >=  $total_reads and  ($clp_s + $crs_s) >= $te_s and ($clp_e+$crs_e) >= $te_e){     #####i########################  filtering 1#####  filtering 1
+	if ($total >=  $total_reads and  ($clp_s + $crs_s) >= $te_s and ($clp_e+$crs_e) >= $te_e){     #############################  filtering 1#####  filtering 1
 		$boo = 1;
 	}
 	
@@ -161,6 +171,9 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	}elsif($dir eq "S"){
 		($s_p,$e_p) = deter_ord($ee,$ss);
 		$t = "+$sc=$t";
+	}else{
+		($s_p,$e_p) = deter_ord($ss,$ee);
+		$t = "x$sc=$t";
 	}
 
 
