@@ -17,21 +17,32 @@ my $usage = "USAGE:
 	REQUIRED -2 the paired read file 2	
 	REQUIRED -f gff file
 			 
-		-b the total number of required events[3] OR minimum required support events at TE start[1], events at TE end[1], cross reads at TE start
-			defualt in the form of '3,1,1', seperate by comma 
-		-R the minimum ratio of support fragments  and depth of 200 bp around the insertion site; default 0.2
-		-B the sorted and indexed bam file of all clean reads align to reference genome; on condition of '-F F'
-		-D <3,200>, the depth range to filter candidate insertion site. 
-		-c FORMAT:\\d,\\d,\\d; for  cpu number for BWA and samtools view and samtools sort    defualt 8,2,2
-		-e <T|F: default F> if TE sequence have homolog in genome. use blast to hard mask repeat sequence
-		-F <T|F: default F> run scripts in 'FAST' mode; It won't align all reads to reference genome , you can do it by yourself
-		-T use this specifed temperate directory or use the DEFAULT one :[project].[aStringOfNumbers]
+		-F <Y|N: default N> run scripts in 'FAST' mode; It won't align all reads to reference genome and caculate the bg depth 
+			parameters specific to  '-F N'  :
+			-B use your previous sorted and indexed bam file of all clean reads align to reference genome; on condition of '-F N'
+			-R the minimum ratio of support fragments  and depth of 200 bp around the insertion site; default 0.2
+			-D <3,200>, the depth range to filter candidate insertion site. 
+
+		-e <Y|N: default N> if TE sequence have homolog in genome. use blast to hard mask repeat sequence
+		
+		-b the total number of required supporting reads [3], minimum required supporting reads cover TE start[1], reads cover TE end[1]
+			defualt: in the form of '3,1,1', seperate by comma 
+		
+		-c FORMAT:\\d,\\d,\\d; for  cpu number for 'BWA mem', 'samtools view'  and 'samtools sort'    defualt 8,2,2
+		
 		-w window size for cluster you support reads: DEFAULT :100bp
+		
+		-T use this specifed temperate directory or use the DEFAULT one :[project].[aStringOfNumbers]
+		
 		-m <T|F: default F> Only print out all commands to STDERR
 	         
 		-h print STDERR this help message    
 
-	BWA samtools should in you PATH
+	
+		eg: perl $0 -g genome.fa -t tnt1.fa -l 300 -n tnt1 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
+
+		BWA samtools should in you PATH
+	
 	";
 
 die "$usage\n" if (@ARGV == 0);
@@ -58,8 +69,8 @@ my $bam = $opt{B}?$opt{B}:0;
 my $depth_range= $opt{D}?$opt{D}:"3,200";
 my $cpu    = $opt{c}?$opt{c}:"8,2,2";
 	my($cpu_bwa,$cpu_view,$cpu_sort) = split /,/,$cpu;
-my $exists = $opt{e}?$opt{e}:"F";
-my $fast   = $opt{F}?$opt{F}:"F";
+my $exists = $opt{e}?$opt{e}:"N";
+my $fast   = $opt{F}?$opt{F}:"N";
 my $tmp_dir = $opt{T}? $opt{T} : "$proj.".time();
 my $window = $opt{w}?$opt{w}:100;
 my $only_cmd = $opt{m}?$opt{m}:"F";
@@ -76,7 +87,7 @@ process_cmd($cmd);					# temperate folder contain intermidiate files
 
 ####################### prepare template #########
 
-if($exists =~ /F/i){
+if($exists =~ /N/i){
 	$cmd = "cat $genome $te_seq >$tmp_dir/$proj.$te.genome.fa";
 }else{
 	$cmd = "perl $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -o $tmp_dir/$proj.$te.genome.fa";
@@ -110,7 +121,7 @@ process_cmd($cmd);				# index te sequence
 
 ##### align original reads to reference genome ######
 my $transformtobed_bam ;
-if($fast =~ /F/i and $bam == 0){
+if($fast =~ /N/i and $bam == 0){
 	$cmd = "bwa mem -T 20 -t $cpu_bwa $tmp_dir/$proj.$te.genome.fa $rs1_ori $rs2_ori | samtools view -@ $cpu_view -bS - | samtools sort -@ $cpu_sort - $tmp_dir/$proj.aln.bg.ref.sort";
 	process_cmd($cmd);
 	$transformtobed_bam = "-D $depth_range -b $tmp_dir/$proj.aln.bg.ref.sort.bam";
@@ -118,9 +129,9 @@ if($fast =~ /F/i and $bam == 0){
 	$cmd = "samtools index $tmp_dir/$proj.aln.bg.ref.sort.bam";
 	process_cmd($cmd);
 
-}elsif($fast =~ /F/i and $bam){
+}elsif($fast =~ /N/i and $bam){
 	$transformtobed_bam = "-D $depth_range -b $bam";
-}elsif($fast =~ /T/i){
+}elsif($fast =~ /Y/i){
 	$transformtobed_bam = "" ; # run transform_to_bed/pl withot bam file provided
 }
 

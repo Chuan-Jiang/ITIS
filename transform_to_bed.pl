@@ -79,6 +79,9 @@ while(<INS>){
 	
 	if(($chr eq $rcder{chr}) and ($pos - $rcder{pos} <= $win_s)){
 		push @clus,$_;
+		$rcder{chr} = $chr;
+		$rcder{pos} = $pos;
+		$rcder{ty} = $ty;
 	}else{
 		bed(\@clus,\%dirs);
 		undef(%dirs);

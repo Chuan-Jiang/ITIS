@@ -24,7 +24,7 @@ while (<$fh>){
 
 		################ main body ###########
 		foreach my $hit (@hits){
-			my ($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$dis,$seq,$qua ) = (split /\t/,$hit)[0,1,2,3,4,5,6,7,8,9,10];
+			my ($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$dis,$seq,$qua,$keys) = (split /\t/,$hit,12)[0,1,2,3,4,5,6,7,8,9,10,11];
 			my $r = ($flag =~ /1/?1:2);
 			if ($cig !~ /H/){
 				my ($s,$q);
@@ -49,7 +49,7 @@ while (<$fh>){
 					$q = $qua_ha{$r};
 				}
 				$cig =~ s/H/S/g;
-				print "$id\t$flag\t$chr\t$pos\t$mq\t$cig\t$nchr\t$npos\t$dis\t$s\t$q\n";
+				print "$id\t$flag\t$chr\t$pos\t$mq\t$cig\t$nchr\t$npos\t$dis\t$s\t$q\t$keys\n";
 			}
 		}
 

@@ -77,6 +77,7 @@ foreach my $grp (@aligns){  # parse each group of reads
 	my %cors;
 	my @hits = @$grp;
 	$rds = join "\n",@hits;
+	
 	my %te_ha = read_2_ha($hits[0] );
 	$cors{$te} = \%te_ha;
 	my %chr_ha = read_2_ha($hits[1] );
@@ -128,8 +129,11 @@ sub te_aln{
 	while (<$fh>){
 		chomp;
 		my @ar  = (split /\t/,$_,12);
-		my ($id,$flag,$pos,$cig,$seq,$tags) = @ar[0,1,3,5,9,11];
+		$ar[5] =~ s/H/S/;
 		
+		my ($id,$flag,$pos,$cig,$seq,$tags) = @ar[0,1,3,5,9,11];
+	
+
 		my $direc = ($flag =~ /r/)?-1:1;
 		my ($as) = $tags =~ /AS:i:(\d+)/;  
 
@@ -155,11 +159,11 @@ sub te_aln{
 			
 		if ($cig =~ /^\d+M$/){
 			push @{$guanxi{$id}}, $p;
-		}elsif($cig =~ /^\d+M(\d+)[SH]$/){
+		}elsif($cig =~ /^\d+M(\d+)S$/){
 			if (abs(($pos + length($l_seq) - $1 -1) - $tnt_len) < 2){
 				push @{$guanxi{$id}} ,$p;
 			}
-		}elsif($cig =~ /^\d+[SH]\d+M$/){
+		}elsif($cig =~ /^\d+S\d+M$/){
 			if (abs ($pos) < 2){
 				push @{$guanxi{$id}} , $p;
 			}
@@ -190,7 +194,7 @@ sub scan_sam{    # put the pair reads in to one element of one array @re
 		
 		if(   defined $guanxi{"$id:$r_a_t"}){
 			foreach my $te_aln (@{$guanxi{"$id:$r_a_t"}}){
-				print "$te_aln\n$_\n" if ($id eq "SRR823377.1286498");
+				#print "$te_aln\n$_\n" if ($id eq "SRR556175.40406632");
 				push @re, [$te_aln,$_] unless ($chr =~ $te);
 			}
 		}
@@ -211,6 +215,7 @@ sub read_2_ha{     # this subroutine used to
 	$cors{pos} = $pos;
 	$cors{seq} = $seq;
 	$cors{chr} = $chr;
+	#print "$cs\t$rc\t$id\n" if ($id =~ /SRR556175\.40406632/);
 	return %cors;
 }
 
@@ -295,8 +300,8 @@ sub te_start{
 		
 		my $l = $1;
 		if ($cors{$te}{pos} <=2 ){
-			my $que = substr($cors{$te}{seq},0,$l);
-			( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+			my $que = uc(substr($cors{$te}{seq},0,$l));
+			( my $que_r = $que) =~ tr/ATCG/TAGC/;
 			$que_r = reverse $que_r;
 			my $ins_direc;
 			my $sub;
@@ -347,8 +352,8 @@ sub te_end{
 		my $l = $1;
 		my $end_pos = $cors{$te}{pos} + length($cors{$te}{seq}) - $l;
 		if ($end_pos >= $tnt_len-10 ){
-			my $que = substr($cors{$te}{seq},-$l);
-			( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+			my $que = uc(substr($cors{$te}{seq},-$l));
+			( my $que_r = $que) =~ tr/ATCG/TAGC/;
 			$que_r = reverse $que_r;
 			my $ins_direc;
 			my $sub;
@@ -399,8 +404,8 @@ sub ge_start{
 		#  ---------------------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<-------------------------------------------------
 		#                                                         -------->        <----------  
 		my $l = $1;
-		my $que = substr($cors{tar}{seq},0,$l);
-		( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+		my $que = uc(substr($cors{tar}{seq},0,$l));
+		( my $que_r = $que) =~ tr/ATCG/TAGC/;
 		$que_r = reverse $que_r; 
 		my $sub_h = "NNNNN".substr($genomes{$te},0,$l+5);
 		my $sub_t = substr($genomes{$te},-($l+5))."NNNNN";
@@ -438,8 +443,8 @@ sub ge_end{
 		#                                     -------->        <----------  
 		my $l = $1;
 				
-		my $que = substr($cors{tar}{seq},-$l);
-		( my $que_r = $que) =~ tr/ATCGatcg/TAGCtagc/;
+		my $que = uc(substr($cors{tar}{seq},-$l));
+		( my $que_r = $que) =~ tr/ATCG/TAGC/;
 		$que_r = reverse $que_r; 
 		my $sub_h = "NNNNN".substr($genomes{$te},0,$l+5);
 		my $sub_t = substr($genomes{$te},-($l+5))."NNNNN";
@@ -469,6 +474,8 @@ sub ge_end{
 
 sub mat { 
 	my ($que,$sub) = @_;
+	$que = uc($que);
+	$sub = uc($sub);
 	my $q_l = length $que;
 	my $s_l = length $sub;
 	my $record = 100;

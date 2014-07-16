@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 use warnings; use strict;
+use Seq;
 use Getopt::Std;
 
 my %opt;
@@ -23,16 +24,17 @@ open my $fh, $file or die $!;
 my $tmp = "tmp_bwa".time();
 open my $out, ">$tmp" or die $!;
 
-my $exi = 1;
-while (<$fh>){
+while (<$fh>){  #  open full informative sam file
 	chomp;
-	my ($id,$r,$chr,$seq)  = (split /\t/,$_)[0,1,2,9];	
-	#$r =~ s/.*(\d)/$1/;
-	
+	next if (/^@/);
+	my ($id,$flag,$chr,$seq)  = (split /\t/,$_)[0,1,2,9];	
+	(my$r) = $flag  =~ /(\d)/;
+	print "ERRO:::$id\n" unless $seq;
+	$seq = Seq::rev_com($seq) if ( $flag =~ /r/);
+	#print "$id\t$seq\n" if  ( $flag =~ /r/);
 	if ($chr =~ /$te/  ){
 		my $q = "J"x(length($seq));
-		print $out "\@$id:$exi\n$seq\n\+\n$q\n";
-		$exi ++;
+		print $out "\@$id:$r\n$seq\n\+\n$q\n";
 	}
 }
 
