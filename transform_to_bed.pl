@@ -82,6 +82,9 @@ while(<INS>){
 		$rcder{chr} = $chr;
 		$rcder{pos} = $pos;
 		$rcder{ty} = $ty;
+		if(eof(INS)){
+			bed(\@clus,\%dirs);
+		}
 	}else{
 		bed(\@clus,\%dirs);
 		undef(%dirs);
@@ -122,8 +125,9 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	
 	my %in_ha;
 	my ($id,$d,$chr,$pos,$ty);
+	my $map_q;
 	foreach my $pos (@clu){
-		($id,$d,$chr,$pos,$ty) = split /\t/,$pos;
+		($id,$d,$chr,$pos,$ty,my $mq) = split /\t/,$pos;
 		$in_ha{$id} ++;
 		if ($ty =~ /GS|TS/ ){
 			push @sit_s,$pos;
@@ -134,7 +138,10 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		}elsif( $ty =~ /CE/){
 			push @rou_e,$pos;
 		}
+		$map_q += $mq;
 	}
+	$map_q = int($map_q/@clu);
+
 	my $num_fg = keys %in_ha;
 
 	############### collet exact insert pos 
@@ -176,7 +183,7 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		$t = "+$sc=$t";
 	}else{
 		($s_p,$e_p) = deter_ord($ss,$ee);
-		$t = "x$sc=$t";
+		$t = "*$sc=$t";
 	}
 
 
@@ -203,14 +210,14 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		}else{
 			$dep = 0;
 		}
-		$t .= ";$num_fg/$dep";
+		$t .= ";DR=$num_fg/$dep";
 		if ( $boo and $dep >= $min_d  and $dep <= $max_d and $num_fg/$dep >= $ratio ){                               ############################Filtering 2#################
 			$boo = 1;
 		}else{
 			$boo = 0;
 		}
 	}
-	
+	$t .= ";MQ=$map_q";
 	print OUT_R "$chr\t$s_p\t$e_p\t$t\n" if ($total >= $total_reads);
 	print OUT_F "$chr\t$s_p\t$e_p\t$t\n" if ($boo);
 }

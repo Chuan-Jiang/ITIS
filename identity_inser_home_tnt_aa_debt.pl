@@ -215,6 +215,7 @@ sub read_2_ha{     # this subroutine used to
 	$cors{pos} = $pos;
 	$cors{seq} = $seq;
 	$cors{chr} = $chr;
+	$cors{mq} = $mq;
 	#print "$cs\t$rc\t$id\n" if ($id =~ /SRR556175\.40406632/);
 	return %cors;
 }
@@ -263,7 +264,7 @@ sub cross {
 			$jun = $cors{tar}{pos};                            # assume the ins site at the start of match of read at genome
 		}
 		$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
-		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE\n";
+		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE\t$cors{tar}{mq}\n";
 		print SUPP "$rds\n";
 	}elsif ( $cors{$te}{direc} == -1  and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))){
 		
@@ -282,10 +283,10 @@ sub cross {
 			$jun = $cors{tar}{pos};
 		}
 		$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
-		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCS\n";
+		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCS\t$cors{tar}{mq}\n";
 		print SUPP "$rds\n";
 	}else{
-		print  "cross fail:$cors{$te}{id}\tte_direc:$cors{$te}{direc}\tte_pos:$cors{$te}{pos}\ttar_direc:$cors{tar}{direc}\n" if ($opts{d});
+		print  "error:cross fail:$cors{$te}{id}\tte_direc:$cors{$te}{direc}\tte_pos:$cors{$te}{pos}\ttar_direc:$cors{tar}{direc}\n" if ($opts{d});
 	}
 }
 
@@ -316,7 +317,7 @@ sub te_start{
 				
 				if($jun != -1 and $diff/$l < 0.05){
 					$jun = $jun + $pos_t+ $l -1 ;
-					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
+					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\t$cors{tar}{mq}\n";
 					print SUPP "$rds\n";
 				}
 			}else{
@@ -328,15 +329,15 @@ sub te_start{
 
 				if($jun != -1 and $diff/$l < 0.05){
 					$jun = $jun + $sub_start ;
-					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\n";
+					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS\t$cors{tar}{mq}\n";
 					print SUPP "$rds\n";
 				}	
 			}
 		}else{
-			print "te_start_pos_err:$cors{$te}{id}\t$cors{$te}{pos}\n"if ($opts{d});
+			print "error: te_start_pos_err:$cors{$te}{id}\t$cors{$te}{pos}\n"if ($opts{d});
 		}
 	}else{
-		print  "te_start_direc:$cors{$te}{id}\t$cors{$te}{cig}\t$cors{$te}{direc}\n" if ($opts{d});
+		print  "error: te_start_direc:$cors{$te}{id}\t$cors{$te}{cig}\t$cors{$te}{direc}\n" if ($opts{d});
 	}
 }
 
@@ -368,7 +369,7 @@ sub te_end{
 				
 				if( $jun != -1 and $diff/$l <0.05 ){
 					$jun = $jun + $pos_t + $l -1 ;
-					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
+					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\t$cors{tar}{mq}\n";
 					print SUPP "$rds\n";
 				}
 			}else{
@@ -380,15 +381,15 @@ sub te_end{
 
 				if($jun != -1 and $diff/$l < 0.05 ){
 					$jun = $jun + $sub_start;
-					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\n";
+					print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE\t$cors{tar}{mq}\n";
 					print SUPP "$rds\n";
 				}
 			}
 		}else{
-			print  "te_end_pos:$cors{$te}{id}\t$end_pos\n"if ($opts{d}) ;
+			print  "error te_end_pos:$cors{$te}{id}\t$end_pos\n"if ($opts{d}) ;
 		}
 	}else{
-		print "te_end_direc:$cors{$te}{id}\t$cors{$te}{cig}\t$cors{$te}{direc} \n"if ($opts{d});
+		print "error  te_end_direc:$cors{$te}{id}\t$cors{$te}{cig}\t$cors{$te}{direc} \n"if ($opts{d});
 	}
 }
 
@@ -416,17 +417,17 @@ sub ge_start{
 				my $adj = $ma_hash{3} - 5;
 				my $ins_direc = "S";
 				my $jun  = $cors{tar}{pos} - $adj;
-				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\n";
+				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 			}elsif($ma_hash{-2}  and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))) {
 				my $adj = $ma_hash{-2} -5 ;
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + $adj ;
-				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\n";
+				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 			}
 		}else{
-			print "ge_start_mism:$cors{tar}{id}:$que\t$que_r\n"if ($opts{d});
+			print "error ge_start_mism:$cors{tar}{id}:$que\t$que_r\n"if ($opts{d});
 		}
 	}
 }
@@ -456,17 +457,17 @@ sub ge_end{
 				my $adj = $ma_hash{-3} - 5;
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1+$adj;
-				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\n";
+				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 			}elsif ( $ma_hash{2} and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))){
 				my $adj = $ma_hash{2} - 5;
 				my $ins_direc = "S";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1-$adj;
-				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\n";
+				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 			}
 		}else{
-			print "ge_end_mism:$cors{tar}{id}\t$que\tsub:$sub_t\t$sub_h\n"if ($opts{d});
+			print "error: ge_end_mism:$cors{tar}{id}\t$que\tsub:$sub_t\t$sub_h\n"if ($opts{d});
 		}
 	}
 }

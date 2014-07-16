@@ -47,7 +47,7 @@ while (<SAM>){     #  reading sam file one by one
 		my @va = @rs;     # alignments of pairs  in array @va
 		my $pt = join "\n",@va;     # $pt is ready to print
 
-		my $map_q;		# used to check map_q of reads at genome
+		#my $map_q;		# used to check map_q of reads at genome
 		my $cross;      # used to check if pairs are located at genome and te
 		foreach my $it (@va){
 			my ($title,$flag,$chr,$mq,$cig,$rnext) = (split /\t/,$it)[0,1,2,4,5,6];
@@ -55,11 +55,12 @@ while (<SAM>){     #  reading sam file one by one
 			if(($rnext =~ /$id/ and $chr !~ /$id/) or ($rnext ne "=" and $chr =~ /($id)/)){
 				$cross ++;
 			}
-			if ($chr !~ /$id/ and $mq >0){
-				$map_q ++ ;
-			}
+			
+			#if ($chr !~ /$id/ and $mq >0){
+			#	$map_q ++ ;
+			#}
 		}
-		if($map_q and $cross){
+		if($cross){
 			print $fh "$pt\n";
 		}
 
