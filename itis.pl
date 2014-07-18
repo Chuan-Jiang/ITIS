@@ -23,6 +23,8 @@ my $usage = "USAGE:
 			-R the minimum ratio of support fragments  and depth of 200 bp around the insertion site; default 0.2
 			-D <3,200>, the depth range to filter candidate insertion site. 
 
+		-q default: 1  the minimum average mapping quality of all supporting reads
+
 		-e <Y|N: default N> if TE sequence have homolog in genome. use blast to hard mask repeat sequence
 		
 		-b the total number of required supporting reads [3], minimum required supporting reads cover TE start[1], reads cover TE end[1]
@@ -34,7 +36,7 @@ my $usage = "USAGE:
 		
 		-T use this specifed temperate directory or use the DEFAULT one :[project].[aStringOfNumbers]
 		
-		-m <T|F: default F> Only print out all commands to STDERR
+		-m <Y|N: default F> Only print out all commands to STDERR
 	         
 		-h print STDERR this help message    
 
@@ -47,7 +49,7 @@ my $usage = "USAGE:
 
 die "$usage\n" if (@ARGV == 0);
 my %opt;
-getopts("g:t:l:n:N:1:2:f:b:R:B:D:c:e:F:T:w:m:h",\%opt);
+getopts("g:t:l:n:N:1:2:f:b:R:B:D:c:q:e:F:T:w:m:h",\%opt);
 
 die "$usage\n" if ($opt{h});
 
@@ -73,17 +75,20 @@ my $exists = $opt{e}?$opt{e}:"N";
 my $fast   = $opt{F}?$opt{F}:"N";
 my $tmp_dir = $opt{T}? $opt{T} : "$proj.".time();
 my $window = $opt{w}?$opt{w}:100;
-my $only_cmd = $opt{m}?$opt{m}:"F";
+my $only_cmd = $opt{m}?$opt{m}:"N";
 my $cmd;
 my $bindir  = "$FindBin::Bin";
-
+my $map_q = $opt{q}?$opt{q}:1;
 
 ##########################################################
   
 
-$cmd = "mkdir $tmp_dir";
-process_cmd($cmd);					# temperate folder contain intermidiate files
-
+if(-e $tmp_dir){
+	print "using dir: $tmp_dir\n";
+}else{
+	$cmd = "mkdir $tmp_dir";
+	process_cmd($cmd);					# temperate folder contain intermidiate files
+}
 
 ####################### prepare template #########
 
@@ -124,13 +129,13 @@ my $transformtobed_bam ;
 if($fast =~ /N/i and $bam == 0){
 	$cmd = "bwa mem -T 20 -t $cpu_bwa $tmp_dir/$proj.$te.genome.fa $rs1_ori $rs2_ori | samtools view -@ $cpu_view -bS - | samtools sort -@ $cpu_sort - $tmp_dir/$proj.aln.bg.ref.sort";
 	process_cmd($cmd);
-	$transformtobed_bam = "-D $depth_range -b $tmp_dir/$proj.aln.bg.ref.sort.bam";
+	$transformtobed_bam = "-b $tmp_dir/$proj.aln.bg.ref.sort.bam";
 	
 	$cmd = "samtools index $tmp_dir/$proj.aln.bg.ref.sort.bam";
 	process_cmd($cmd);
 
 }elsif($fast =~ /N/i and $bam){
-	$transformtobed_bam = "-D $depth_range -b $bam";
+	$transformtobed_bam = "-b $bam";
 }elsif($fast =~ /Y/i){
 	$transformtobed_bam = "" ; # run transform_to_bed/pl withot bam file provided
 }
@@ -188,9 +193,11 @@ process_cmd($cmd);
 ###### sort the support reads and generate bed files  ######
 $cmd = " sort -k 3,3 -k 4,4n $tmp_dir/${proj}.ins.loc.lst >$tmp_dir/${proj}.ins.loc.sorted.lst";
 process_cmd($cmd);
-$cmd = "perl  $bindir/transform_to_bed.pl -p $tmp_dir/$proj $transformtobed_bam -t $min_reads -r $ratio -i $tmp_dir/$proj.ins.loc.sorted.lst -w $window ";
+$cmd = "perl  $bindir/transform_to_bed.pl $transformtobed_bam -p $tmp_dir/$proj  -i $tmp_dir/$proj.ins.loc.sorted.lst -w $window ";
 process_cmd($cmd);
 
+$cmd = "perl $bindir/filter_insertion.pl -i $tmp_dir/$proj.raw.bed -n $min_reads -q $map_q -r $ratio -d $depth_range >$tmp_dir/$proj.filtered.bed";
+process_cmd($cmd);
 
 #####  Intergrate gene information in GFF and generate IGV snpshot batch file  ####
 if($gff){
@@ -207,8 +214,8 @@ if($gff){
 sub process_cmd {
     my ($cmd) = @_;
 
-    if($only_cmd =~ /T/i){
-		print STDERR "CMD: $cmd\n";
+    if($only_cmd =~ /Y/i){
+		print STDERR "$cmd\n";
 	}else{
 		print STDERR &mytime."CMD: $cmd\n";
 		my $start_time = time();

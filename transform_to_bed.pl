@@ -9,18 +9,12 @@ my $usage = "$0
 	-i : <REQUIRED> reads list file support insertion  
 	-w : default 100, windows size to cluster reads
 	
-FILTER parameters:
-	-t : defualt [3,1,1], the required number of events support insert: total 3, at TE start 1, ant TE end 1; 
-		 If Sites with total larger than or equal 3, it will be saved as raw list \$proj.raw.inser.bed
 	-b : original bam file; used to calculate the bg depth
-	-r : default 0.2; the ratio of number of support reads with background depth aroung 200bp, assume '-b'
-	-D : default <3,200>; the required depth region; assume '-b '
-	
 	-h : help
 	";
 
 die $usage if (@ARGV == 0);
-getopts("p:i:t:r:D:b:w:h",\%opt);
+getopts("p:i:b:w:h",\%opt);
 die $usage if ($opt{h});
 
 my $proj = $opt{p};
@@ -29,13 +23,10 @@ my $ins_file = $opt{i};
 
 my $window = $opt{w}?$opt{w}:100;
 
-my ($total_reads,$te_s,$te_e) = $opt{t}?(split ',',$opt{t}):(split ',','3,1,1');
 
 my $bam = $opt{b}?$opt{b}:0;
 
-my $ratio = $opt{r}?$opt{r}:0.2;
 
-my ($min_d,$max_d) = $opt{D}?(split ',',$opt{D}):(split ',',"3,200");
 ###############parameters################
 #########################################
 #########################################
@@ -43,7 +34,6 @@ my ($min_d,$max_d) = $opt{D}?(split ',',$opt{D}):(split ',',"3,200");
 
 
 open INS,$ins_file or die $!;
-open OUT_F, ">$proj.filtered.bed" or die $!;
 open OUT_R, ">$proj.raw.bed" or die $!; 
 
 
@@ -166,11 +156,7 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	my($clp_s,$clp_e,$crs_s,$crs_e) = (scalar@sit_s,scalar@sit_e,scalar@rou_s,scalar@rou_e);
 	my $total = $clp_s+$clp_e+$crs_s+$crs_e;
 	
-	my $boo = 0;
 
-	if ($total >=  $total_reads and  ($clp_s + $crs_s) >= $te_s and ($clp_e+$crs_e) >= $te_e){     #############################  filtering 1#####  filtering 1
-		$boo = 1;
-	}
 	
 	my $t = join ",",$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
 		
@@ -211,15 +197,9 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 			$dep = 0;
 		}
 		$t .= ";DR=$num_fg/$dep";
-		if ( $boo and $dep >= $min_d  and $dep <= $max_d and $num_fg/$dep >= $ratio ){                               ############################Filtering 2#################
-			$boo = 1;
-		}else{
-			$boo = 0;
-		}
 	}
 	$t .= ";MQ=$map_q";
-	print OUT_R "$chr\t$s_p\t$e_p\t$t\n" if ($total >= $total_reads);
-	print OUT_F "$chr\t$s_p\t$e_p\t$t\n" if ($boo);
+	print OUT_R "$chr\t$s_p\t$e_p\t$t\n";
 }
 
 sub deter_ord{

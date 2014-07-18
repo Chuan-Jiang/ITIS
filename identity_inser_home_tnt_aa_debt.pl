@@ -263,7 +263,6 @@ sub cross {
 			$ins_direc = "S";
 			$jun = $cors{tar}{pos};                            # assume the ins site at the start of match of read at genome
 		}
-		$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE\t$cors{tar}{mq}\n";
 		print SUPP "$rds\n";
 	}elsif ( $cors{$te}{direc} == -1  and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))){
@@ -282,7 +281,6 @@ sub cross {
 			$ins_direc = "R";
 			$jun = $cors{tar}{pos};
 		}
-		$ins_direc = $cors{$te}{ori} if($cors{$te}{ori});
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCS\t$cors{tar}{mq}\n";
 		print SUPP "$rds\n";
 	}else{
@@ -300,7 +298,7 @@ sub te_start{
 		#                                                                 ------->   <-----
 		
 		my $l = $1;
-		if ($cors{$te}{pos} <=2 ){
+		if ($cors{$te}{pos} <=10  ){
 			my $que = uc(substr($cors{$te}{seq},0,$l));
 			( my $que_r = $que) =~ tr/ATCG/TAGC/;
 			$que_r = reverse $que_r;
@@ -408,19 +406,19 @@ sub ge_start{
 		my $que = uc(substr($cors{tar}{seq},0,$l));
 		( my $que_r = $que) =~ tr/ATCG/TAGC/;
 		$que_r = reverse $que_r; 
-		my $sub_h = "NNNNN".substr($genomes{$te},0,$l+5);
-		my $sub_t = substr($genomes{$te},-($l+5))."NNNNN";
+		my $sub_h = "NNNNNNNNNN".substr($genomes{$te},0,$l+10);
+		my $sub_t = substr($genomes{$te},-($l+10))."NNNNNNNNNN";
 		
 		my %ma_hash = match($que,$que_r,$sub_h,$sub_t);	
 		if  (%ma_hash){
 			if ($ma_hash{3}  and $cors{$te}{direc} == 1 and $cors{$te}{pos} > ($tnt_len - $ins_size)  ){
-				my $adj = $ma_hash{3} - 5;
+				my $adj = $ma_hash{3} - 10;
 				my $ins_direc = "S";
 				my $jun  = $cors{tar}{pos} - $adj;
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 			}elsif($ma_hash{-2}  and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))) {
-				my $adj = $ma_hash{-2} -5 ;
+				my $adj = $ma_hash{-2} -10 ;
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + $adj ;
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\t$cors{tar}{mq}\n";
@@ -447,20 +445,20 @@ sub ge_end{
 		my $que = uc(substr($cors{tar}{seq},-$l));
 		( my $que_r = $que) =~ tr/ATCG/TAGC/;
 		$que_r = reverse $que_r; 
-		my $sub_h = "NNNNN".substr($genomes{$te},0,$l+5);
-		my $sub_t = substr($genomes{$te},-($l+5))."NNNNN";
+		my $sub_h = "NNNNNNNNNN".substr($genomes{$te},0,$l+10);
+		my $sub_t = substr($genomes{$te},-($l+10))."NNNNNNNNNN";
 		
 		my %ma_hash = match($que,$que_r,$sub_h,$sub_t);
 		if (%ma_hash){
 			
 			if ( $ma_hash{-3} and $cors{$te}{direc} == 1 and $cors{$te}{pos} > ($tnt_len - $ins_size)){
-				my $adj = $ma_hash{-3} - 5;
+				my $adj = $ma_hash{-3} - 10;
 				my $ins_direc = "R";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1+$adj;
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 			}elsif ( $ma_hash{2} and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}))){
-				my $adj = $ma_hash{2} - 5;
+				my $adj = $ma_hash{2} - 10;
 				my $ins_direc = "S";
 				my $jun = $cors{tar}{pos} + length($cors{tar}{seq})-$l-1-$adj;
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS\t$cors{tar}{mq}\n";

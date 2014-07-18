@@ -50,16 +50,14 @@ while(<INS>){
 		my($k,$v) = split /=/,$r;
 		$other{$k} = $v;
 	}
-
-	if($other{MQ} and $other{MQ} < $map_q){
-		$boo = 0;
-		
-	}
-
-	if($other{DR} and $other{DR} < $ratio){
+	
+	if(exists $other{MQ} and $other{MQ} < $map_q){
 		$boo = 0;
 	}
 
+	if(exists $other{DR} and eval($other{DR}) < $ratio){
+		$boo = 0;
+	}
 	print "$_\n" if $boo;
 }
 
