@@ -23,9 +23,9 @@ my $folder = $opt{d}?$opt{d}:'.';
 
 
 ################ generate igv batch   #############
-	open FH,"> $folder/$proj.igv.bat" or die $!;
+	open FH,"> $folder/$proj.$te.igv.bat" or die $!;
 	open BED,"$bed_file" or die $!;
-	print FH "snapshotDirectory ./$proj.snap.dir\n";
+	print FH "snapshotDirectory ./$proj.$te.snap.dir\n";
 	while (<BED>){
 		chomp;
 		 my ($chr,$s,$e) = split /\t/,$_;
@@ -45,7 +45,7 @@ if($opt{a}){    #  if provided gff file, then process the following code util th
 
 ################# generate usefull gff file containg intergenic region  ##########
 
-open OUT, ">$folder/$proj.annotation.tsv" or die $!;
+open OUT, ">$folder/$proj.$te.annotation.tsv" or die $!;
 open TEM,">tem.$proj" or die $!;
 open GFF,"awk 'BEGIN{IGNORECASE=1} {if(\$3 ~ /gene/){print \$0}}' $gff_file |" or die $!;
 chomp (my @gff = <GFF>);

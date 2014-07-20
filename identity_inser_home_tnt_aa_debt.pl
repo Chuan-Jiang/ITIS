@@ -36,8 +36,8 @@ my $tnt_len = length ($genomes{$te});  # transposon length
 
 
 ############# files used to save results ##
-open OUT ,">${project}.ins.loc.lst" or die $!;
-open SUPP,">${project}.supported.reads.sam" or die $!;
+open OUT ,">${project}.$te.ins.loc.lst" or die $!;
+open SUPP,">${project}.$te.supported.reads.sam" or die $!;
 
 
 ############ parsing the te realn sam file ##### because TE have LTRs at both end
@@ -130,8 +130,7 @@ sub te_aln{
 		chomp;
 		my @ar  = (split /\t/,$_,12);
 		$ar[5] =~ s/H/S/;
-		
-		my ($id,$flag,$pos,$cig,$seq,$tags) = @ar[0,1,3,5,9,11];
+		my ($id,$flag,$chr,$pos,$cig,$seq,$tags) = @ar[0,1,2,3,5,9,11];
 	
 
 		my $direc = ($flag =~ /r/)?-1:1;
@@ -148,7 +147,7 @@ sub te_aln{
 			$l_as = $as;
 			$te_rcd{$id} = 1;
 		}
-		
+		next if ($chr !~ $te);
 		if($direc == -1){
 			$seq = Seq::rev_com($l_seq);
 		}else{

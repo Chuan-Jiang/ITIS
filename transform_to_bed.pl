@@ -8,13 +8,13 @@ my $usage = "$0
 	-p : project_name/ will be prefix of your output file
 	-i : <REQUIRED> reads list file support insertion  
 	-w : default 100, windows size to cluster reads
-	
+	-n : the name of you te seq	
 	-b : original bam file; used to calculate the bg depth
 	-h : help
 	";
 
 die $usage if (@ARGV == 0);
-getopts("p:i:b:w:h",\%opt);
+getopts("p:i:b:w:n:h",\%opt);
 die $usage if ($opt{h});
 
 my $proj = $opt{p};
@@ -26,6 +26,7 @@ my $window = $opt{w}?$opt{w}:100;
 
 my $bam = $opt{b}?$opt{b}:0;
 
+my $te = $opt{n};
 
 ###############parameters################
 #########################################
@@ -198,7 +199,8 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		}
 		$t .= ";DR=$num_fg/$dep";
 	}
-	$t .= ";MQ=$map_q";
+	$t .= ";MQ=$map_q;NM=$te";
+
 	print OUT_R "$chr\t$s_p\t$e_p\t$t\n";
 }
 

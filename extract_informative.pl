@@ -23,7 +23,7 @@ my $pre = $opt{p};
 my $sam = $opt{s};
 
 
-open my $fh,">$pre.informative.sam" or die $!;
+open my $fh,">$pre.$id.informative.sam" or die $!;
 
 my %reads;      # hash to assistant to detect paired reads in sam file
 my @rs;			# array contain the pairs of one fragment
