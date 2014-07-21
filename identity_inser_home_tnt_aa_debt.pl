@@ -44,20 +44,6 @@ open SUPP,">${project}.$te.supported.reads.sam" or die $!;
 
 my %guanxi = te_aln($sam_te); 
 
-=head
-my $che = $guanxi{"SRR823377.1286498:1"};
-print "@$che\n";
-my $ch = $guanxi{"SRR823377.1286498:2"};
-print "@$ch\n";
-
-foreach( keys%guanxi){
-	#print "K:$_\n";	
-	my $v = $guanxi{$_};
-	print "@$v\n";
-}
-=cut
-
-
 
 
 ###########################################################
