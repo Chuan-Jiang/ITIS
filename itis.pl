@@ -24,7 +24,7 @@ my $usage = "USAGE:
 
 		-q default: 1  the minimum average mapping quality of all supporting reads
 
-		-e <Y|N: default N> if TE sequence have homolog in genome. use blast to hard mask repeat sequence
+		-e <Y|N: default N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required
 		
 		-b the total number of required supporting reads [3], minimum required supporting reads cover TE start[1], reads cover TE end[1]
 			defualt: in the form of '3,1,1', seperate by comma 
@@ -90,17 +90,17 @@ if(-e $tmp_dir){
 
 ####################### prepare template #########
 
+my $para_filter;
 if($exists =~ /N/i){
+	$para_filter = "";
 	$cmd = "cat $genome $te_seq >$tmp_dir/$proj.ref_and_te.fa";
 }else{
-	$cmd = "perl $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -o $tmp_dir/$proj.ref_and_te.fa";
+	$cmd = "perl $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -p $tmp_dir/te_homo_in_ref.lst -o $tmp_dir/$proj.ref_and_te.fa";
+	$para_filter = "-l $tmp_dir/te_homo_in_ref.lst";
 }
 
-if (-e "$tmp_dir/$proj.ref_and_te.fa"){
-	print STDERR "Seems you already merged the sequences. Skipped\n";
-}else{
-	process_cmd($cmd);				# cat sequence together
-}
+
+process_cmd($cmd);				# cat sequence together
 
 
 $cmd = "cp $te_seq $tmp_dir/";
@@ -207,7 +207,7 @@ foreach my $te (@tes){
 	$cmd = "perl  $bindir/transform_to_bed.pl $transformtobed_bam -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -w $window ";
 	process_cmd($cmd);
 
-	$cmd = "perl $bindir/filter_insertion.pl -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q -r $ratio -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";
+	$cmd = "perl $bindir/filter_insertion.pl $para_filter -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q -r $ratio -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";
 	process_cmd($cmd);
 
 	#####  Intergrate gene information in GFF and generate IGV snpshot batch file  ####

@@ -5,13 +5,15 @@ use Bio::SeqIO;
 use Getopt::Std;
 
 my %opt;
-getopts("g:t:o:h",\%opt) ;
+getopts("g:t:o:p:h",\%opt) ;
 
 die "USAGE $0 
 	-g genome seq file
 	-t te seq file
-	-o out_put_file 
+	-o output fasta file name, merged ref genome and te	
+	-p file name of pos list of TE
 	-h help
+
 	" if ( $opt{h});
 
 # put genome seq in hash
@@ -28,11 +30,13 @@ while (my $seq_obj = $seq_in -> next_seq){
 my %te = Seq::seq_hash($opt{t});
 
 # using blast2seq to identify the te homolog
+open LIS, ">$opt{p}" or die $!;
 open BLA, "blastn -query $opt{t} -subject $opt{g} -outfmt 6 |" or die $!;
 while(<BLA>){
 	chomp;
-	my ($chr,$s,$e) = (split /\t/,$_)[1,8,9];
+	my ($te,$chr,$s,$e) = (split /\t/,$_)[0,1,8,9];
 	($s,$e) = sort {$a<=>$b}($s,$e);
+	print LIS "$chr\t$s\t$e\t$te\n";
 	my $l = $e-$s+1;
 	#print STDERR "substracting...\nalignment $_\n";
 	substr($genome{$chr},$s-1,$l) = "N"x$l;

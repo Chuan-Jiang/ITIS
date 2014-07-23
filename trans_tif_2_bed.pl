@@ -5,6 +5,12 @@ while(<>){
 	chomp;
 	my($chr,$start,$end,$res) = split(/\t/,$_,4);
 	$res =~ s/\t/,/g;
+	if ($res =~ /forward/){
+		$res = "+$res";
+	}else{
+		$res = "-$res";
+	}
+
 	($start,$end) = sort{$a<=>$b} ($start,$end);
 	$start --;
 	print "$chr\t$start\t$end\t$res\n";
