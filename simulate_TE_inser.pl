@@ -12,6 +12,7 @@ my %te_ha = Seq::seq_hash($te_file);
 
 my $seed = 10;
 my $step= 8e6;
+
 srand(100);
 while(my $inseq = $seq_in -> next_seq){
 	my $len = $inseq -> length;

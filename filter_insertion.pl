@@ -50,31 +50,27 @@ while(<INS>){
 	
 	my $boo = 1;
 
-	chomp;
-	my($chr,$s,$e,$t) = (split /\t/, $_)[0,1,2,3];
+	my($chr,$s,$e,$t,$rest) = (split /\t/, $_,5);
 	
 	my@tags = split /;/, $t;
 
-### filter support reads num	
-	my($tot,$num) = split /=/, $tags[0];
-	if (abs($tot) < $total_reads){   ### filter 1
-		$boo = 0;
-	}
-
-	my ($r1,$r2,$r3,$r4) = split /,/,$num;
-	if ( $r1+$r3 < $te_s or $r2+$r4 < $te_e){
-		$boo = 0;
-	}
 
 
 ### parse the rest key and values	
-	shift @tags;
 	my %other;
 	foreach my $r (@tags){
 		my($k,$v) = split /=/,$r;
 		$other{$k} = $v;
 	}
-	
+
+
+# filter support reads number
+	if(exists $other{SR}){
+		my($tot,$r1,$r2,$r3,$r4) = split /,/,$other{SR};
+		if($tot < $total_reads or $r1+$r3 < $te_s or $r2+$r4 < $te_e){
+			$boo = 0;
+		}
+	}
 # filter eveage mapping valeu
 	if(exists $other{MQ} and $other{MQ} < $map_q){
 		$boo = 0;
@@ -93,12 +89,12 @@ while(<INS>){
 			}
 		}
 		if($near){
-			$_.= ";NB=Y";
+			$t .= ";NB=Y";
 		}else{
-			$_ .= ";NB=N";
+			$t .= ";NB=N";
 		}
 	}
-	print "$_\n" if $boo;
+	print join "\t", ($chr,$s,$e,$t,$rest) if $boo;
 }
 
 

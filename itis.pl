@@ -26,6 +26,8 @@ my $usage = "USAGE:
 
 		-e <Y|N: default N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required
 		
+		-a <10> the allow number of base can be lost during transposon
+
 		-b the total number of required supporting reads [3], minimum required supporting reads cover TE start[1], reads cover TE end[1]
 			defualt: in the form of '3,1,1', seperate by comma 
 		
@@ -48,7 +50,7 @@ my $usage = "USAGE:
 
 die "$usage\n" if (@ARGV == 0);
 my %opt;
-getopts("g:t:l:N:1:2:f:b:R:B:D:c:q:e:F:T:w:m:h",\%opt);
+getopts("g:t:l:N:1:2:f:b:R:B:D:c:q:e:a:F:T:w:m:h",\%opt);
 
 die "$usage\n" if ($opt{h});
 
@@ -77,7 +79,7 @@ my $only_cmd = $opt{m}?$opt{m}:"N";
 my $cmd;
 my $bindir  = "$FindBin::Bin";
 my $map_q = $opt{q}?$opt{q}:1;
-
+my $lost = $opt{a}?$opt{a}:10;
 ##########################################################
   
 
@@ -192,7 +194,7 @@ foreach my $te (@tes){
 
 
 	######  identify the reads support insertion  #####
-	$cmd = "perl $bindir/identity_inser_home_tnt_aa_debt.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj";
+	$cmd = "perl $bindir/identity_inser_home_tnt_aa_debt.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
 	process_cmd($cmd);
 
 	$cmd = "samtools view -bS $tmp_dir/${proj}.$te.supported.reads.sam | samtools sort - $tmp_dir/${proj}.$te.supported.reads.sorted ";
@@ -227,7 +229,7 @@ sub process_cmd {
     my ($cmd) = @_;
 
     if($only_cmd =~ /Y/i){
-		print STDERR "$cmd\n";
+		print STDERR "$cmd\n\n";
 	}else{
 		print STDERR &mytime."CMD: $cmd\n";
 		my $start_time = time();

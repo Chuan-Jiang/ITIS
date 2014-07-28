@@ -73,6 +73,8 @@ while(<INS>){
 		$rcder{chr} = $chr;
 		$rcder{pos} = $pos;
 		$rcder{ty} = $ty;
+		$dirs{$dir} ++;
+
 		if(eof(INS)){
 			bed(\@clus,\%dirs);
 		}
@@ -84,27 +86,27 @@ while(<INS>){
 	}
 }
 
-
+######################
+#######################
+######################
+#####################
 
 sub bed{          # use a cluster of support reads to determine if it is a ture TE insertion
 
 	my @clu =  @{$_[0]};
 	my %dirs = %{$_[1]};
 	my $dir;
-
 	if ($dirs{S} and $dirs{R}){	
-		if($dirs{S}/$dirs{R} > 0.8){
+		if($dirs{S}/($dirs{R}+$dirs{S}) > 0.8){
 			$dir = "S";
-		}elsif( $dirs{R}/$dirs{S} > 0.8){
+		}elsif( $dirs{R}/($dirs{R}+$dirs{S}) > 0.8){
 			$dir = "R";
 		}else{
-			$dir = "N";
+			return();
 		}
 	}else{
 		($dir) = keys %dirs;
 	}
-	
-	my @ppp = %dirs;
 
 	my $sc = scalar @clu;      # $sc    :     the number of support reads
 	my %sites;   # contain all start and end site
@@ -113,17 +115,21 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	my @sit_e;   # end site
 	my @rou_s;   # uncertain start site
 	my @rou_e;	 # uncertain end site
-	
+	my @te_s;
+	my @te_e;
+
 	my %in_ha;
 	my ($id,$d,$chr,$pos,$ty);
 	my $map_q;
 	foreach my $pos (@clu){
 		($id,$d,$chr,$pos,$ty,my $mq) = split /\t/,$pos;
 		$in_ha{$id} ++;
-		if ($ty =~ /GS|TS/ ){
+		if ($ty =~ /(GS:|TS:)(\d+)/ ){
 			push @sit_s,$pos;
-		}elsif ($ty =~ /GE|TE/){
+			push @te_s, $2;
+		}elsif ($ty =~ /(GE:|TE:)(\d+)/){
 			push @sit_e,$pos;
+			push @te_e, $2;
 		}elsif( $ty =~ /CS/){
 			push @rou_s,$pos;
 		}elsif( $ty =~ /CE/){
@@ -144,6 +150,7 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	}else{
 		$ss = 0;
 	}
+
 	
 	my $ee;
 	if (@sit_e){
@@ -153,24 +160,39 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	}else{
 		$ee = 0;
 	}	
+
+	my $t_s;
+	if(@te_s){
+		$t_s = mode(@te_s);
+	}else{
+		$t_s = "NA";
+	}
+	my $t_e;
+	if(@te_e){
+		$t_e = mode (@te_e);
+	}else{
+		$t_e = "NA";
+	}
+
 	##################
 	my($clp_s,$clp_e,$crs_s,$crs_e) = (scalar@sit_s,scalar@sit_e,scalar@rou_s,scalar@rou_e);
-	my $total = $clp_s+$clp_e+$crs_s+$crs_e;
 	
 
 	
-	my $t = join ",",$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
+	my $SR = join ",",$sc,$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
 		
 	my($s_p,$e_p);	 #  to print 
+	
+	my $D;
 	if ($dir eq "R"){
 		($s_p,$e_p) = deter_ord($ss,$ee);
-		$t = "-$sc=$t";
+		$D = "-";
 	}elsif($dir eq "S"){
 		($s_p,$e_p) = deter_ord($ee,$ss);
-		$t = "+$sc=$t";
+		$D = "+";
 	}else{
 		($s_p,$e_p) = deter_ord($ss,$ee);
-		$t = "*$sc=$t";
+		$D = ".";
 	}
 
 
@@ -197,11 +219,12 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		}else{
 			$dep = 0;
 		}
-		$t .= ";DR=$num_fg/$dep";
+		$SR .= ";DR=$num_fg/$dep";
 	}
-	$t .= ";MQ=$map_q;NM=$te";
+	my $MQ = $map_q;
+	my $NM = $te;
 
-	print OUT_R "$chr\t$s_p\t$e_p\t$t\n";
+	print OUT_R "$chr\t$s_p\t$e_p\tSR=$SR;MQ=$map_q;NM=$te;TS=$t_s;TE=$t_e\t.\t$D\n";
 }
 
 sub deter_ord{
