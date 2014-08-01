@@ -13,6 +13,6 @@ while(<>){
 
 	($start,$end) = sort{$a<=>$b} ($start,$end);
 	$start --;
-	print "$chr\t$start\t$end\t$res\n";
+	print "$chr\t$start\t$end\tTIF,$res\n";
 }
 

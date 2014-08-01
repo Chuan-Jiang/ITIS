@@ -2,7 +2,7 @@
 use warnings; use strict;
 use Seq;
 use Getopt::Std;
-
+use Bio::AlignIO;
 
 ########## get parameters #################
 my %opts;
@@ -40,8 +40,8 @@ my $tnt_len = length ($genomes{$te});  # transposon length
 ############# files used to save results ##
 #open OUT, ">/dev/stdout" or die $!;
 open OUT ,">${project}.$te.ins.loc.lst" or die $!;
-open SUPP,">${project}.$te.supported.reads.sam" or die $!;
-
+open SUPP,">${project}.$te.support.reads.sam" or die $!;
+open NSUPP,">${project}.$te.unsupport.reads.sam" or die $!;
 
 ############ parsing the te realn sam file ##### because TE have LTRs at both end
 
@@ -55,9 +55,11 @@ my %guanxi = te_aln($sam_te);
 ###########################################################
 my @aligns = scan_sam ($sam_file);
 
+=head
 foreach my $it ( @aligns){
 	print "@$it\n" if $$it[0] =~ (/ACB053:89:D260YACXX:7:1107:12510:30746/);
 }
+=cut 
 
 my $rds;
 foreach my $grp (@aligns){  # parse each group of reads
@@ -75,28 +77,23 @@ foreach my $grp (@aligns){  # parse each group of reads
 	my $tar_cig = $cors{tar}{cig};
 	my $te_cig = $cors{$te}{cig}; 
 	
-
+	my $boo_ns = 0;
 	if ( $tar_cig =~ /M/ and $te_cig =~ /M/){
-		cross(%cors);
+		$boo_ns = 1 if( cross(%cors));
 	}
 	if($te_cig =~ /S/){
-		te_start(%cors);
+		$boo_ns = 1 if(te_start(%cors));
 	}
 	if($te_cig =~ /E/){
-		te_end(%cors);
+		$boo_ns = 1 if(te_end(%cors));
 	}
 	if($tar_cig =~ /S/){
-		ge_start(%cors);
+		$boo_ns = 1 if (ge_start(%cors));
 	}
 	if($tar_cig =~ /E/){
-		ge_end(%cors);
+		$boo_ns = 1 if (ge_end(%cors));
 	}
-	if ($tar_cig =~ /Z/){
-		#print "Do nothing for tar_cig_f:$read\n";
-	}
-	if ($te_cig =~ /Z/){
-		#print "Do nothing for te_cig_f:$read\n";
-	}
+	print NSUPP "$rds\n"  unless($boo_ns);
 }
 #################### the end of mainbody of code ######################
 
@@ -258,6 +255,7 @@ sub cross {
 		my $te_jun = $cors{$te}{pos} + $len_te;
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE:$te_jun\t$cors{tar}{mq}\n";
 		print SUPP "$rds\n";
+		return 1;
 	}elsif ( $cors{$te}{direc} == -1  and $cors{$te}{pos} < ($ins_size  - $len_te + $lost )){
 		
 		#   ---------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>------------------------------
@@ -277,6 +275,7 @@ sub cross {
 		my $te_jun = $cors{$te}{pos};
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCS:$te_jun\t$cors{tar}{mq}\n";
 		print SUPP "$rds\n";
+		return 1;
 	}else{
 		print STDERR  "error:cross fail:$cors{$te}{id}\tte_direc:$cors{$te}{direc}\tte_pos:$cors{$te}{pos}\ttar_direc:$cors{tar}{direc}\n" if ($opts{d});
 	}
@@ -314,6 +313,7 @@ sub te_start{    # postion limitor in guanxi
 				my $jun = $juns[0] + $pos_t+ $l -1 ;
 				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS:$jun_te\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}
 		}else{
 			$ins_direc = "R";
@@ -325,6 +325,7 @@ sub te_start{    # postion limitor in guanxi
 				my  $jun = $juns[-1] + $sub_start ;
 				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS:$jun_te\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}	
 		}
 	
@@ -363,6 +364,7 @@ sub te_end{
 				my $jun = $juns[0] + $pos_t + $l -1 ;
 				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE:$end_pos\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}
 		}else{
 			$ins_direc = "S";
@@ -374,6 +376,7 @@ sub te_end{
 				my $jun = $juns[-1] + $sub_start;
 				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE:$end_pos\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}
 		}
 	}else{
@@ -427,6 +430,7 @@ sub ge_start{
 				#my $te_jun = $tnt_len -$lost + $adj + $r;
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE:$te_jun\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}elsif($ma_hash{-2}  and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}) + $lost + 10)) {
 				
 		#
@@ -455,6 +459,7 @@ sub ge_start{
 				#my $te_jun = $adj + $rr -10 +1;
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS:$te_jun\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}
 		}else{
 			print "error ge_start_mism:$cors{tar}{id}:$que\t$que_r\n"if ($opts{d});
@@ -481,7 +486,6 @@ sub ge_end{
 
 		my %ma_hash = match($que,$que_r,$sub_h,$sub_t);
 
-		print "$que\n$que_r\n$sub_h\n$sub_t\n" if ($cors{$te}{id} =~ /ACB053:89:D260YACXX:7:1107:12510:30746/);
 		if (%ma_hash){
 			
 		#
@@ -512,6 +516,7 @@ sub ge_end{
 
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGE:$te_jun\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}elsif ( $ma_hash{2} and $cors{$te}{direc} == -1 and $cors{$te}{pos} < ($ins_size - length($cors{$te}{seq}) + $lost + 10)){
 				my $adj = $ma_hash{2}[0];
 
@@ -543,6 +548,7 @@ sub ge_end{
 
 				print OUT "$cors{tar}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tGS:$te_jun\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
+				return 1;
 			}
 		}else{
 			print "error: ge_end_mism:$cors{tar}{id}\t$que\tsub:$sub_t\t$sub_h\n"if ($opts{d});

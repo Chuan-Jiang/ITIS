@@ -4,7 +4,7 @@ use Getopt::Std;
 
 my $help = "$0 
 	-i : insertion list in bed format
-	-l : te homo in ref genome list file
+	-l : postion list of te homo in ref genome
 	-n : default <3,1,1>, the minimum requried reads supporting insertion, minimum required reads cover TE start siteand and minimum required reads cover TE end site
 	-q : degault <1>, the minimum required average mapping quality
 	-d : default <3-200>, the reads depth range

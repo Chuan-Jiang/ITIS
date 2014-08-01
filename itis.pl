@@ -83,6 +83,7 @@ my $lost = $opt{a}?$opt{a}:10;
 ##########################################################
   
 
+
 if(-e $tmp_dir){
 	print "using dir: $tmp_dir\n";
 }else{
@@ -91,6 +92,7 @@ if(-e $tmp_dir){
 }
 
 ####################### prepare template #########
+open CMD, ">$tmp_dir/commands_rcd";
 
 my $para_filter;
 if($exists =~ /N/i){
@@ -166,6 +168,7 @@ process_cmd($cmd);
 ###### check  te seq id in te seq file####
 
 open TE,$te_seq or die $!;
+
 my @tes;
 while(<TE>){
 	chomp;
@@ -197,9 +200,9 @@ foreach my $te (@tes){
 	$cmd = "perl $bindir/identity_inser_home_tnt_aa_debt.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
 	process_cmd($cmd);
 
-	$cmd = "samtools view -bS $tmp_dir/${proj}.$te.supported.reads.sam | samtools sort - $tmp_dir/${proj}.$te.supported.reads.sorted ";
+	$cmd = "samtools view -bS $tmp_dir/${proj}.$te.support.reads.sam | samtools sort - $tmp_dir/${proj}.$te.support.reads.sorted ";
 	process_cmd($cmd);
-	$cmd = " samtools index   $tmp_dir/${proj}.$te.supported.reads.sorted.bam " ;
+	$cmd = " samtools index   $tmp_dir/${proj}.$te.support.reads.sorted.bam " ;
 	process_cmd($cmd);
 	###### 
 
@@ -230,8 +233,10 @@ sub process_cmd {
 
     if($only_cmd =~ /Y/i){
 		print STDERR "$cmd\n\n";
+		print CMD " $cmd\n\n";
 	}else{
 		print STDERR &mytime."CMD: $cmd\n";
+		print CMD &mytime."CMD: $cmd\n";
 		my $start_time = time();
 		my $ret = system($cmd);
 		my $end_time = time();

@@ -95,25 +95,24 @@ my $la_t;
 while (<BEDTOOL>){
 	chomp;
 	#print "$_\n";
-	my($chr,$s,$e,$d,$t,$an) = (split /\t/,$_)[0,1,2,3,6,12];
-	next if (($s+$e) == $la and $la_t eq "gene");
+	my($chr,$s,$e,$name,$d,$t,$an) = (split /\t/,$_)[0,1,2,3,5,8,14];
+	
 	my ($up,$down);
-	my $te_seq = ($d =~ /:S:/)?$genome{$te}:Seq::rev_com($genome{$te});
-	if ($d =~ /:P$/){
-		$up = substr ($genome{$chr},$e-1005,1005);
-		$down = substr ($genome{$chr},$s,1005);
-	}else{
-		$up = substr ($genome{$chr},$s-1000,1000)."=";
-		$down = "=".substr ($genome{$chr},$e-1,1000);
-	}
-	my $seq = $up.lc($te_seq).$down;
-	print OUT "$chr\t$s\t$e\t$d\t$t\t$an\t$seq\n";
 
-	$la = $s+$e;
+	my $te_seq = ($d =~ /\+/)?$genome{$te}:Seq::rev_com($genome{$te});
+	
+	$up = substr ($genome{$chr},$e-1005,1005);
+	$down = substr ($genome{$chr},$s,1005);
+	
+	my $seq = $up.lc($te_seq).$down;
+	
+	print OUT "$chr\t$s\t$e\t$name\t$d\t$t\t$an\t$seq\n";
+
+	$la = "$chr:$s:$e";
 	$la_t = $t;
 
 }
 
-unlink "tem.$proj";
+#unlink "tem.$proj";
 
 }
