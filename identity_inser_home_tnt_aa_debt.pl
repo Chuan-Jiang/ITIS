@@ -236,7 +236,7 @@ sub cross {
 	my %cors = @_;
 	my $len_tar = length ($cors{tar}{seq});
 	my $len_te  = length ($cors{$te}{seq});
-
+	my $len_inter = int($ins_size/2);
 	if ( $cors{$te}{direc} == 1 and $cors{$te}{pos} > ($tnt_len - $ins_size  - $lost)){
 		
 		#   ---------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>------------------------------
@@ -247,10 +247,10 @@ sub cross {
 		my ($ins_direc,$jun);
 		if ($cors{tar}{direc} == 1){
 			$ins_direc = "R";
-			$jun = $cors{tar}{pos} + $len_tar;  # assume the ins site is the end of match of reads at genome
+			$jun = $cors{tar}{pos} + $len_tar + $len_inter;  # assume the ins site is the end of match of reads at genome
 		}else{
 			$ins_direc = "S";
-			$jun = $cors{tar}{pos};                            # assume the ins site at the start of match of read at genome
+			$jun = $cors{tar}{pos} - $len_inter;                            # assume the ins site at the start of match of read at genome
 		}
 		my $te_jun = $cors{$te}{pos} + $len_te;
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCE:$te_jun\t$cors{tar}{mq}\n";
@@ -263,14 +263,14 @@ sub cross {
 		#
 		#   ----------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<------------------------------
 		#                                                               ------>s	<-----
-       		
+       	my $len_tar = length ($cors{tar}{seq});	
 		my ($ins_direc,$jun);
 		if ( $cors{tar}{direc} == 1 ){
 			$ins_direc = "S";
-			$jun = $cors{tar}{pos} + length($cors{tar}{seq});
+			$jun = $cors{tar}{pos} + $len_tar + $len_inter;
 		}else{
 			$ins_direc = "R";
-			$jun = $cors{tar}{pos};
+			$jun = $cors{tar}{pos} - $len_inter;
 		}
 		my $te_jun = $cors{$te}{pos};
 		print OUT "$cors{$te}{id}\t$ins_direc\t$cors{tar}{chr}\t$jun\tCS:$te_jun\t$cors{tar}{mq}\n";

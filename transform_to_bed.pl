@@ -13,10 +13,11 @@ my $usage = "$0
 	-b : original bam file; used to calculate the bg depth; bam file should been sorted and indexed
 			All reads should been aligned to mergered reference genome file with bwa mem
 	-h : help
+	-d : swithh on debug model
 	";
 
 die $usage if (@ARGV == 0);
-getopts("p:i:b:w:n:l:h",\%opt);
+getopts("p:i:b:w:n:l:hd",\%opt);
 die $usage if ($opt{h});
 
 my $proj = $opt{p};
@@ -31,6 +32,7 @@ my $bam = $opt{b}?$opt{b}:0;
 
 my $te = $opt{n};
 
+my $db = $opt{d};
 ###############parameters################
 #########################################
 #########################################
@@ -38,7 +40,7 @@ my $te = $opt{n};
 
 
 open INS,$ins_file or die $!;
-
+open OUT_R, ">$proj.raw.bed" or die $!;
 
 
 
@@ -62,12 +64,7 @@ while(<INS>){	# iterate the lst file and get tsd information and candidate inser
 	my $win_s;# determine using which window step
 
 	if(! %rcder ){
-		$rcder{chr} = $chr;
-		$rcder{pos} = $pos;
-		$rcder{ty} = $ty;
-		
-		$dirs{$dir} ++;
-		push @clus,$_;
+		rcd_it($_,$chr,$pos,$ty,$dir);	
 		next;
 	}
 
@@ -80,36 +77,58 @@ while(<INS>){	# iterate the lst file and get tsd information and candidate inser
 		$win_s = $window;
 	}
 	# get a cluter of support reads
+	
 	if(($chr eq $rcder{chr}) and ($pos - $rcder{pos} <= $win_s)){
-		push @clus,$_;
-		$rcder{chr} = $chr;
-		$rcder{pos} = $pos;
-		$rcder{ty} = $ty;
-		$dirs{$dir} ++;
+		rcd_it($_,$chr,$pos,$ty,$dir);
 
 		if(eof(INS)){
-			my($tsd,$inf) = bed(\@clus,\%dirs);
-			push @tsds,$tsd;
+			my($tsd,$inf) = collect_infor(\@clus,\%dirs);
+			print "CLU:@clus\n" if $db;
+			push @tsds,$tsd if $tsd>0;
 			push @lsts, $inf;
 		}
 	}else{
-		my($tsd,$inf) = bed(\@clus,\%dirs);
-		push @tsds,$tsd;
+		my($tsd,$inf) = collect_infor(\@clus,\%dirs);
+		print "CLU:@clus\n" if $db;
+		push @tsds,$tsd if $tsd >0;
 		push @lsts, $inf;
 
 		undef(%dirs);
 		undef(%rcder) ;
 		undef(@clus);
+		rcd_it($_,$chr,$pos,$ty,$dir);
+		if (eof(INS)){
+			print "CLU:@clus\n" if $db;
+			my($tsd,$inf) = collect_infor(\@clus,\%dirs);
+			push @tsds,$tsd  if $tsd >0;
+			push @lsts, $inf;
+		}
 	}
 }
 close( INS );
 
-######### To the final step to print  each candidate#######
+sub rcd_it{
+	my($it,$chr,$pos,$ty,$d) = @_;
+	push @clus, $it;
+	$dirs{$d} ++;
+	$rcder{chr} = $chr;
+	$rcder{pos} = $pos;
+	$rcder{ty} = $ty;
+}
+
+######### the final step to print  each candidate#######
+#  1, used esimated tsd length to determine the exact insertion site
+#
+#  2,calculate the bg depth and estimate Genome Type if BAM file is used  #
+##########################
+
 
 # get the most of tsd length
 my $tsd_l = mode(@tsds);
-print STDERR "Estimate the length of TSD is 5 bp\n";
+$tsd_l++;
+print STDERR "Estimate the length of TSD is $tsd_l bp\n";
 $tsd_l--;
+
 
 # check each  candidate insertion
 for my $it ( @lsts){   # iterate to integrate other information
@@ -117,7 +136,7 @@ for my $it ( @lsts){   # iterate to integrate other information
 	my($chr,$ss,$ee,$in_ha_ref,$sc,$clp_s,$clp_e,$crs_s,$crs_e,$tags,$dir) = @$it;
 	if($dir eq "."){
 		print STDERR "Can't determing the direction of insertion at $chr\t$ss\t$sc\n";
-		next;
+		next  ;     # if a cluster of reads have different diretion, discarded
 	}
 	
 	### esitimate the exact insertion site  ####
@@ -140,13 +159,17 @@ for my $it ( @lsts){   # iterate to integrate other information
 	if ($bam){		
 	
 		###### esitmate ratio #####
-		estimate_homo($chr,$s_p,$e_p,$in_ha_ref) if($clp_s or $clp_e);
+		my ($sup,$nsup) = ("NA","NA");
+		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir) if($clp_s or $clp_e);
 		
-
+		$tags .= ";GT=$sup,$nsup";
 		######## pick the bg depth ######
+		
 		my $pad = int((100- ($e_p-$s_p))/2);
 		my ($s_r,$e_r)=$pad>0 ? ($s_p-$pad,$e_p+$pad):($s_p,$e_p);
 		
+		$s_r = 0 if $s_r < 0;
+
 		open SV,"samtools depth  $bam  -r $chr:$s_r-$e_r  2>/dev/null| " or die $!;
 		my $dep;
 		my $m_l;
@@ -161,15 +184,21 @@ for my $it ( @lsts){   # iterate to integrate other information
 		}else{
 			$dep = 0;
 		}
+		$tags .= ";DP=$dep";
 	}
-
-
-
+	print "$chr\t$s_p\t$e_p\t$tags\t.\t$dir\n" if $db;
+	print OUT_R  "$chr\t$s_p\t$e_p\t$tags\t.\t$dir\n";
+}
 
 ######################
 #######################
 
-sub bed{          # use a cluster of support reads to determine if it is a ture TE insertion
+
+
+
+
+# the aim of this subroutine is to collect the information of candidate sites
+sub collect_infor{          # use a cluster of support reads to determine if it is a ture TE insertion
 
 	my @clu  =  @{$_[0]};
 	my %dirs =  %{$_[1]};
@@ -206,7 +235,6 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 	my $map_q;
 	foreach my $pos (@clu){
 		($id,$d,$chr,$pos,$ty,my $mq) = split /\t/,$pos;
-		$in_ha{$id} ++;
 		if ($ty =~ /(GS:|TS:)(\d+)/ ){
 			push @sit_s,$pos;
 			push @te_s, $2;
@@ -218,6 +246,7 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 		}elsif( $ty =~ /CE/){
 			push @rou_e,$pos;
 		}
+		$in_ha{$id} .= $ty;
 		$map_q += $mq;
 	}
 	$map_q = int($map_q/@clu);
@@ -259,11 +288,17 @@ sub bed{          # use a cluster of support reads to determine if it is a ture 
 
 	##################
 	my($clp_s,$clp_e,$crs_s,$crs_e) = (scalar@sit_s,scalar@sit_e,scalar@rou_s,scalar@rou_e);
-	my $SR = join ",",$sc,$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
-		
-	return(abs($ss-$ee),[$chr,$ss,$ee,\%in_ha,$sc,$clp_s,$clp_e,$crs_s,$crs_e,"MQ=$map_q;NM=$te;TS=$t_s;TE=$t_e",$dir]);
+	my $SR = join ",", $num_fg,$sc,$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
+	
+	my $tsd_l = (@sit_s and @sit_e)?abs($ss-$ee)	: 0;
+	return($tsd_l,[$chr,$ss,$ee,\%in_ha,$sc,$clp_s,$clp_e,$crs_s,$crs_e,"SR=$SR;MQ=$map_q;NM=$te;TS=$t_s;TE=$t_e",$dir]);
 }
 
+# SR : counts of total and every type of supporting reads
+# MQ : the average mapping quality
+# NM : the name of te 
+# TS : the start site of te 
+# TE : the end site of te
 
 
 
@@ -275,7 +310,7 @@ sub deter_ord{
 		$br = ($bb != 0)?abs($bb):abs($aa);
 		return($ar-1,$br);
 	}else{
-		($ar,$br) = sort {$a <=> $b} (abs($ar),abs($br));
+		($ar,$br) = sort {$a <=> $b} (abs($aa),abs($bb));
 		return ($ar-1,$br);
 	}
 }
@@ -305,68 +340,85 @@ sub median {
 
 
 sub estimate_homo {        # check each read pair  around  the candidate insert sites
-	my($chr,$s_r,$e_r,$in_ha_ref) = @_;	
-	
+	my($chr,$s_r,$e_r,$in_ha_ref,$dir) = @_;	
+	print "\nEstimate:$chr\t$s_r\t$e_r\n" if $db;
 	my %in_ha = %$in_ha_ref;
 	my $sam_s = $s_r - $lib_l;
-	my $sam_e = $e_r + 2;
+	my $sam_e = $e_r + $lib_l;
 
-	#system("samtools view $bam  $chr:$sam_s-$sam_e -b -h | samtools sort -n - $proj/tmp_file_for_homo.sort  2>/dev/null")== 0 or die " PIPE error when calculate bg reads\n";
-	#open my $homo "samtools view $proj/tmp_file_for_homo.sort.bam | " or die $!;
+	$sam_s = 0 if $sam_s < 0;	
 	
+	if($db){
+		while(my($k,$v) = each %in_ha){
+			print "SUPP: $k\t$v\n";
+		}
+	}	
 	###iterate each read pair
 	my %reads;
-	open my $home "samtools view $bam $chr:$sam_s-$sam_e | " or die $!;
-	my @rds;
-	while(<$homo>){
+	print "SAMVIEW:samtools view -X $bam $chr:$sam_s-$sam_e\n" if $db;
+	open my $sam, "samtools view -X $bam $chr:$sam_s-$sam_e | " or die $!;
+	while(<$sam>){
 		chomp;
 		next if (/^@/);
+		my $r = $_;
+		my ( $id,$tag,$chr,$pos,$mq,$cig,$nchr,$npos,$tlen) = (split /\t/,$r)[0,1,2,3,4,5,6,7,8];
+		print "RD: $r\n" if $db;
+		next if ($mq == 0);
 		
-		my ($id,$flag,$chr,$pos,$mq,$cig,$nchr,$npos,$seq) = (split /\t/,$_)[0,1,2,3,4,5,6,7,9];
+		next if ($tag =~ /u/);
+		$reads{$id} = 9;
 
-		if (! keys %reads or exists $reads{$id}){
-			push @rds , $_;
-			if(eof($fh)){
-				#####
-				check_reads_pair(\@rds);		
-			}
+		#  1 :  support insertion
+		#  2 :  support excision
+		#  3 :  flank reads 
+		#  4 :  discarded support reads
+
+		if (exists $in_ha{$id} and $reads{$id} >= 1){
+			 $reads{$id} = 1;
 		}else{
-
-			######
-			check_reads_pair(\@rds);
-			######
-			
-			undef(%reads);
-			undef(@rds);
-			$reads{$id} = 1;
-			push @rds , $_;
-		}
-	}
-
-}
-
-sub check_reads_pair {
-	my @rds = shift @_;
-	
-	my @range;
-	for my $r ( @rds){
-		my ( $id,$chr,$pos,$nchr,$npos,$tlen) = (split /\t/,$r)[0,2,3,6,7,8];
-		if (exists $in_ha{$id}){
-			return "I";
-		}else{
-			if ($chr =~ /$te/ or $chr =~ /$te/){
-				return "I";
-			}elsif($chr !~ /$te/ and $nchr eq "="){
+			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 3*$lib_l ){	
+				
+				
+				my @range;	#  determine the range of pair
+				
 				if($tlen > 0){
-					@range = ($pos,$pos+$tlen);
-				}else($tlen < 0){
-					@range = ($npos,$npos-$tlen) ;
+						
+					@range = ($pos,$pos+$tlen-1);
+				}elsif($tlen < 0){
+					@range = ($npos,$npos-$tlen-1) ;
 				}
-			}else{
 
+				# check if the range overlap with TE insertion site
+				if ($range[0] < $s_r and $range[1] > $e_r and $reads{$id} >= 2 ){
+					$reads{$id} = 2;
+				}else{
+					$reads{$id} = 4 if ($reads{$id} >= 4);
+				}
+			}elsif($nchr eq $te){
+				$reads{$id} = 3 if ($reads{$id} >= 3);
+			}else{
+				$reads{$id} = 4 if ($reads{$id} >= 4);
+			}
 		}
-		return \@range;
 	}
+	my $sup = 0;
+	my $nsup = 0 ;
+	my (@sup_r,@nsup_r) if $db;
+	while(my ($k,$v) = each %reads){
+		if($v == 1){
+			push @sup_r, $k if $db;
+			$sup++;
+		}elsif($v == 2){
+			push @nsup_r, $k if $db;
+			$nsup ++;
+		}
+	}
+	if($db){
+		print "SUP: @sup_r\n";
+		print "NSUP: @nsup_r\n";
+	}
+	return ($sup,$nsup);
+
 }
 
 

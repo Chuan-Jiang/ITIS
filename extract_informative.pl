@@ -42,31 +42,40 @@ while (<SAM>){     #  reading sam file one by one
 	if (! keys(%reads )  or exists ($reads{$title})){     #if have no defined hash %reads or the key of %reads is equal to the $title, then I am reading another pair read
 		push @rs,$_;
 		$reads{$title} = "1";
+		if(eof(SAM)){
+			print_clu(@rs);
+		}
 	}else{
 		
-		my @va = @rs;     # alignments of pairs  in array @va
-		my $pt = join "\n",@va;     # $pt is ready to print
-
-		#my $map_q;		# used to check map_q of reads at genome
-		my $cross;      # used to check if pairs are located at genome and te
-		foreach my $it (@va){
-			my ($title,$flag,$chr,$mq,$cig,$rnext) = (split /\t/,$it)[0,1,2,4,5,6];
-			print "ERROR:$_\n$title,$flag,$chr,$cig,$rnext\n" unless($rnext);    # used to help check the vality of code
-			if(($rnext =~ /$id/ and $chr !~ /$id/) or ($rnext ne "=" and $chr =~ /($id)/)){
-				$cross ++;
-			}
-			
-			#if ($chr !~ /$id/ and $mq >0){
-			#	$map_q ++ ;
-			#}
-		}
-		if($cross){
-			print $fh "$pt\n";
-		}
+		print_clu(@rs);
 
 		undef(%reads);
 		$reads{$title} = 1;
 		@rs = ($_);
-		#$reads{$title} = "############$_";
+		print_clu ( @rs) if (eof(SAM));
 	}
 }
+sub print_clu{
+	my @va = @_;
+	my $pt = join "\n",@va;     # $pt is ready to print
+	#my $map_q;     # used to check map_q of reads at genome
+	
+	my $cross;      # used to check if pairs are located at genome and te
+	foreach my $it (@va){
+		my ($title,$flag,$chr,$mq,$cig,$rnext) = (split /\t/,$it)[0,1,2,4,5,6];
+		print "ERROR:$_\n$title,$flag,$chr,$cig,$rnext\n" unless($rnext);    # used to help check the vality of code
+
+		if(($rnext =~ /$id/ and $chr !~ /$id/) or ($rnext ne "=" and $chr =~ /($id)/)){
+			$cross ++;
+		}
+			
+		#if ($chr !~ /$id/ and $mq >0){
+		#	$map_q ++ ;
+		#}
+	}		
+	
+	if($cross){
+		print $fh "$pt\n";
+	}
+}
+

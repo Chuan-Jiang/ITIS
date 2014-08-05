@@ -5,27 +5,26 @@ use Getopt::Std;
 my $help = "$0 
 	-i : insertion list in bed format
 	-l : postion list of te homo in ref genome
-	-n : default <3,1,1>, the minimum requried reads supporting insertion, minimum required reads cover TE start siteand and minimum required reads cover TE end site
+	-n : default <2,3,1,1>, the minimum requried reads supporting insertion, minimum required reads cover TE start siteand and minimum required reads cover TE end site
 	-q : degault <1>, the minimum required average mapping quality
-	-d : default <3-200>, the reads depth range
-	-r : default <0.2>, the minimum ratio of number of supporting reads over bg depth
+	-d : default <2-200>, the reads depth range
 	-h : help message
 	";
 
 die $help unless ( @ARGV);
 
 my %opt;
-getopts("i:l:n:q:d:r:h",\%opt);
+getopts("i:l:c:n:q:d:r:h",\%opt);
 die $help  if($opt{h});
 
 ######## parameters ###########
 
 my $ins_file = $opt{i};
 my $lst = $opt{l};
-my ($total_reads,$te_s,$te_e) = $opt{n}?(split ',',$opt{n}):(split ',','3,1,1');
-my $map_q = $opt{q}?$opt{q}:1;
-my ($min_d,$max_d) = $opt{d}?(split ',',$opt{d}):(split ',',"3,200");
-my $ratio = $opt{r}?$opt{r}:0.2;
+
+my ($CF,$total_reads,$te_s,$te_e) = $opt{n}?(split ',',$opt{n}):(split ',','2,3,1,1');
+my $MQ = $opt{q}?$opt{q}:1;
+my ($DP_L,$DP_H) = $opt{d}?(split ',',$opt{d}):(split ',',"2,200");
 
 open INS, "$ins_file" or die $!;
 
@@ -63,22 +62,24 @@ while(<INS>){
 		$other{$k} = $v;
 	}
 
-
 # filter support reads number
 	if(exists $other{SR}){
-		my($tot,$r1,$r2,$r3,$r4) = split /,/,$other{SR};
-		if($tot < $total_reads or $r1+$r3 < $te_s or $r2+$r4 < $te_e){
+		my($cf,$tot,$r1,$r2,$r3,$r4) = split /,/,$other{SR};
+		if($cf < $CF or $tot < $total_reads or $r1+$r3 < $te_s or $r2+$r4 < $te_e){
 			$boo = 0;
 		}
 	}
 # filter eveage mapping valeu
-	if(exists $other{MQ} and $other{MQ} < $map_q){
+	if(exists $other{MQ} and $other{MQ} < $MQ){
 		$boo = 0;
 	}
 
-# filter depth ratio
-	if(exists $other{DR} and eval($other{DR}) < $ratio){
-		$boo = 0;
+# filter bg depth
+	if(exists $other{DP} ){
+		my $dp = $other{DP};
+		if ($dp < $DP_L or $dp > $DP_H){
+			$boo = 0;
+		}
 	}
 # mark ins near known site
 	if ($lst){
