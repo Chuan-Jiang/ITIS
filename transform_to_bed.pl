@@ -363,7 +363,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 		my $r = $_;
 		my ( $id,$tag,$chr,$pos,$mq,$cig,$nchr,$npos,$tlen) = (split /\t/,$r)[0,1,2,3,4,5,6,7,8];
 		print "RD: $r\n" if $db;
-		next if ($mq == 0);
+		#next if ($mq == 0);
 		
 		next if ($tag =~ /u/);
 		$reads{$id} = 9;
