@@ -22,7 +22,7 @@ my $usage = "USAGE:
 			##  parameters specific to  '-F N'  :
 			-B use your previous sorted and indexed bam file of all clean reads align to reference genome; on condition of '-F N'
 			-R the minimum ratio of support fragments  and depth of 200 bp around the insertion site; default 0.2
-			-D <3,200>, the depth range to filter candidate insertion site. 
+			-D <2,200>, the depth range to filter candidate insertion site. 
 
 		-q default: 1  the minimum average mapping quality of all supporting reads
 
@@ -70,7 +70,7 @@ my $gff = $opt{f};
 my $min_reads  = $opt{b}?$opt{b}:"2,3,1,1";
 my $ratio = $opt{R}?$opt{R}:"0.2";
 my $bam = $opt{B}?$opt{B}:0;
-my $depth_range= $opt{D}?$opt{D}:"3,200";
+my $depth_range= $opt{D}?$opt{D}:"2,200";
 my $cpu    = $opt{c}?$opt{c}:"8,2,2";
 	my($cpu_bwa,$cpu_view,$cpu_sort) = split /,/,$cpu;
 my $exists = $opt{e}?$opt{e}:"N";
@@ -199,7 +199,7 @@ foreach my $te (@tes){
 
 
 	######  identify the reads support insertion  #####
-	$cmd = "perl $bindir/identity_inser_home_tnt_aa_debt.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
+	$cmd = "perl $bindir/identity_inser_sites.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
 	process_cmd($cmd);
 
 	$cmd = "samtools view -buS $tmp_dir/${proj}.$te.support.reads.sam | samtools sort - $tmp_dir/${proj}.$te.support.reads.sorted ";
@@ -211,7 +211,7 @@ foreach my $te (@tes){
 	###### sort the support reads and generate bed files  ######
 	$cmd = " sort -k 3,3 -k 4,4n $tmp_dir/${proj}.$te.ins.loc.lst >$tmp_dir/${proj}.$te.ins.loc.sorted.lst";
 	process_cmd($cmd);
-	$cmd = "perl  $bindir/transform_to_bed.pl $transformtobed_bam -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
+	$cmd = "perl  $bindir/transform_to_bed.pl $transformtobed_bam -e $te_seq -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
 	process_cmd($cmd);
 
 	$cmd = "perl $bindir/filter_insertion.pl $para_filter -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q  -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";

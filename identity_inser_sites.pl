@@ -310,8 +310,11 @@ sub te_start{    # postion limitor in guanxi
 			my ($diff,@juns) = mat($que,$sub);
 			
 			if($diff/$l < 0.05){
-				my $jun = $juns[0] + $pos_t+ $l -1 ;
-				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS:$jun_te\t$cors{tar}{mq}\n";
+				#@juns = map { $_ + $pos_t+ $l -1 } @juns;
+				#my $jun = join ":", @juns;
+				my $jun = $juns[0] + $pos_t+ $l -1;
+				my $mark = @juns >1 ?"ts":"TS";
+				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\t$mark:$jun_te\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 				return 1;
 			}
@@ -322,8 +325,11 @@ sub te_start{    # postion limitor in guanxi
 			
 			my($diff,@juns) = mat($que_r,$sub);
 			if($diff/$l < 0.05){
-				my  $jun = $juns[-1] + $sub_start ;
-				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTS:$jun_te\t$cors{tar}{mq}\n";
+				#@juns = map{ $_ + $sub_start} @juns ;
+				#my $jun = join ":",@juns;
+				my $jun = $juns[0] + $sub_start;
+				my $mark = @juns >1 ?"ts":"TS";
+				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\t$mark:$jun_te\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 				return 1;
 			}	
@@ -361,8 +367,11 @@ sub te_end{
 			my ($diff,@juns) = mat($que_r,$sub);
 			
 			if( $diff/$l <0.05 ){
-				my $jun = $juns[0] + $pos_t + $l -1 ;
-				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE:$end_pos\t$cors{tar}{mq}\n";
+				#@juns = map {$_ + $pos_t + $l -1} @juns;
+				#my $jun = join ":",@juns;
+				my $jun = $juns[0] + $pos_t + $l -1;
+				my $mark = @juns > 1 ? "te":"TE";
+				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\t$mark:$end_pos\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 				return 1;
 			}
@@ -373,8 +382,11 @@ sub te_end{
 			
 			my ($diff,@juns) = mat($que,$sub);
 			if($diff/$l < 0.05 ){
-				my $jun = $juns[-1] + $sub_start;
-				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\tTE:$end_pos\t$cors{tar}{mq}\n";
+				#@juns = map {$_ + $sub_start} @juns;
+				#my $jun = join ":",@juns; 
+				my $jun = $juns[0] + $sub_start;
+				my $mark = @juns > 1 ? "te":"TE";
+				print OUT "$cors{$te}{id}\t$ins_direc\t$chr_t\t$jun\t$mark:$end_pos\t$cors{tar}{mq}\n";
 				print SUPP "$rds\n";
 				return 1;
 			}

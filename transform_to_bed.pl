@@ -1,38 +1,46 @@
 #!/usr/bin/perl
 use warnings; use strict;
 use Getopt::Std;
-
+use Seq;
 ############## parameters ##############
 my %opt;
 my $usage = "$0
 	-p : project_name/ will be prefix of your output file
 	-i : <REQUIRED> reads list file support insertion  
 	-w : default 100, windows size to cluster reads
-	-n : the name of you te seq	
+	-n : the name of you te seq'
 	-l : the lenght of library insertion
 	-b : original bam file; used to calculate the bg depth; bam file should been sorted and indexed
 			All reads should been aligned to mergered reference genome file with bwa mem
+			
+			Sub parameter:
+			-e : the .fa file of TE
 	-h : help
 	-d : swithh on debug model
 	";
 
 die $usage if (@ARGV == 0);
-getopts("p:i:b:w:n:l:hd",\%opt);
+getopts("p:i:b:w:n:l:e:hd",\%opt);
 die $usage if ($opt{h});
 
 my $proj = $opt{p};
 
 my $ins_file = $opt{i};
 
-my $window = $opt{w}?$opt{w}:100;
 
 my $lib_l = $opt{l}?$opt{l}:500;
 
+my $window = $opt{w}?$opt{w}:$lib_l/2;
+
 my $bam = $opt{b}?$opt{b}:0;
+
+my $te_file = $opt{e};
+	my %te_ha = Seq::seq_hash($te_file);
 
 my $te = $opt{n};
 
 my $db = $opt{d};
+
 ###############parameters################
 #########################################
 #########################################
@@ -72,7 +80,7 @@ while(<INS>){	# iterate the lst file and get tsd information and candidate inser
 	if ($ty=~ /C/ and $rcder{ty} =~ /C/){
 		$win_s = $window ;
 	}elsif($ty =~ /G|T/ and  $rcder{ty} =~ /G|T/){
-		$win_s = 20 ;
+		$win_s = 50 ;
 	}else{
 		$win_s = $window;
 	}
@@ -133,7 +141,7 @@ $tsd_l--;
 # check each  candidate insertion
 for my $it ( @lsts){   # iterate to integrate other information
 
-	my($chr,$ss,$ee,$in_ha_ref,$sc,$clp_s,$clp_e,$crs_s,$crs_e,$tags,$dir) = @$it;
+	my($chr,$ss,$ee,$in_ha_ref,$sc,$clp_s,$clp_e,$crs_s,$crs_e,$tags,$t_s,$t_e,$dir) = @$it;
 	if($dir eq "."){
 		print STDERR "Can't determing the direction of insertion at $chr\t$ss\t$sc\n";
 		next  ;     # if a cluster of reads have different diretion, discarded
@@ -160,7 +168,7 @@ for my $it ( @lsts){   # iterate to integrate other information
 	
 		###### esitmate ratio #####
 		my ($sup,$nsup) = ("NA","NA");
-		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir) if($clp_s or $clp_e);
+		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if($clp_s or $clp_e);
 		
 		$tags .= ";GT=$sup,$nsup";
 		######## pick the bg depth ######
@@ -187,7 +195,8 @@ for my $it ( @lsts){   # iterate to integrate other information
 		$tags .= ";DP=$dep";
 	}
 	print "$chr\t$s_p\t$e_p\t$tags\t.\t$dir\n" if $db;
-	print OUT_R  "$chr\t$s_p\t$e_p\t$tags\t.\t$dir\n";
+	$s_p --;
+	print OUT_R  "$chr\t$s_p\t$e_p\t$tags;TS=$t_s;TE=$t_e\t.\t$dir\n";
 }
 
 ######################
@@ -241,9 +250,9 @@ sub collect_infor{          # use a cluster of support reads to determine if it 
 		}elsif ($ty =~ /(GE:|TE:)(\d+)/){
 			push @sit_e,$pos;
 			push @te_e, $2;
-		}elsif( $ty =~ /CS/){
+		}elsif( $ty =~ /CS/ or $ty =~ /ts/){
 			push @rou_s,$pos;
-		}elsif( $ty =~ /CE/){
+		}elsif( $ty =~ /CE/ or $ty =~ /te/){
 			push @rou_e,$pos;
 		}
 		$in_ha{$id} .= $ty;
@@ -291,7 +300,7 @@ sub collect_infor{          # use a cluster of support reads to determine if it 
 	my $SR = join ",", $num_fg,$sc,$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
 	
 	my $tsd_l = (@sit_s and @sit_e)?abs($ss-$ee)	: 0;
-	return($tsd_l,[$chr,$ss,$ee,\%in_ha,$sc,$clp_s,$clp_e,$crs_s,$crs_e,"SR=$SR;MQ=$map_q;NM=$te;TS=$t_s;TE=$t_e",$dir]);
+	return($tsd_l,[$chr,$ss,$ee,\%in_ha,$sc,$clp_s,$clp_e,$crs_s,$crs_e,"SR=$SR;MQ=$map_q;NM=$te",$t_s,$t_e,$dir]);
 }
 
 # SR : counts of total and every type of supporting reads
@@ -340,7 +349,7 @@ sub median {
 
 
 sub estimate_homo {        # check each read pair  around  the candidate insert sites
-	my($chr,$s_r,$e_r,$in_ha_ref,$dir) = @_;	
+	my($chr,$s_r,$e_r,$in_ha_ref,$dir,$t_s,$t_e) = @_;	
 	print "\nEstimate:$chr\t$s_r\t$e_r\n" if $db;
 	my %in_ha = %$in_ha_ref;
 	my $sam_s = $s_r - $lib_l;
@@ -361,7 +370,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 		chomp;
 		next if (/^@/);
 		my $r = $_;
-		my ( $id,$tag,$chr,$pos,$mq,$cig,$nchr,$npos,$tlen) = (split /\t/,$r)[0,1,2,3,4,5,6,7,8];
+		my ( $id,$tag,$chr,$pos,$mq,$cig,$nchr,$npos,$tlen,$seq) = (split /\t/,$r)[0,1,2,3,4,5,6,7,8,9];
 		print "RD: $r\n" if $db;
 		#next if ($mq == 0);
 		
@@ -373,23 +382,44 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 		#  3 :  flank reads 
 		#  4 :  discarded support reads
 
-		if (exists $in_ha{$id} and $reads{$id} >= 1){
-			 $reads{$id} = 1;
+		if (exists $in_ha{$id}){
+			$reads{$id} = 1;
+		}elsif($tlen < 0 and abs($tlen) < 2*$lib_l  and $cig =~ /(\d+)S$/ and $1 >= 5){
+			my $l = $1;
+			my $que = substr($seq,-$l);
+			my $sub;
+			if($dir eq "+"){
+				$sub = substr($te_ha{$te},$t_s-1,$l+5);
+			}else{
+				$sub = Seq::rev_com(substr($te_ha{$te},$t_e-$l-5,$l+5));
+			}
+			#print "$id\t$que\t$sub\n";
+			$reads{$id} = 1 if( check_te($que,$sub));
+		}elsif( $tlen > 0  and abs($tlen) < 2*$lib_l and $cig =~ /^(\d+)S/ and $1 >= 5){   # at least 5 bp soft clipped to check if it is from TE
+			my $l = $1;
+			my $que = substr($seq,0,$l);
+			my $sub;
+			if($dir eq "+"){
+				$sub = substr($te_ha{$te},$t_e-$l-5,$l+5);
+			}else{
+				$sub = Seq::rev_com(substr($te_ha{$te},$t_s-1,$l+5));
+			}
+			#print "$id\t$que\t$sub\n" if ( check_te($que,$sub));
+		    $reads{$id} = 1 if( check_te($que,$sub));
 		}else{
-			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 3*$lib_l ){	
+			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 2*$lib_l ){	
 				
-				
+							
 				my @range;	#  determine the range of pair
 				
-				if($tlen > 0){
-						
+				if($tlen > 0){		
 					@range = ($pos,$pos+$tlen-1);
 				}elsif($tlen < 0){
 					@range = ($npos,$npos-$tlen-1) ;
 				}
 
 				# check if the range overlap with TE insertion site
-				if ($range[0] < $s_r and $range[1] > $e_r and $reads{$id} >= 2 ){
+				if ($range[0] <= $s_r - 5 and $range[1] >= $e_r+5  and $reads{$id} >= 2 ){
 					$reads{$id} = 2;
 				}else{
 					$reads{$id} = 4 if ($reads{$id} >= 4);
@@ -420,10 +450,32 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 	return ($sup,$nsup);
 
 }
+sub  check_te{
+	my ($que,$sub) = @_;
+	$que = uc($que);
+	$sub = uc($sub);
+	my $q_l = length $que;
+	my $s_l = length $sub;
+	
+	for my $i (0..($s_l-$q_l)){
+		my $tgt = substr($sub,$i,$q_l);
+		my $diffcount = () = ($que ^ $tgt) =~ /[^\x00]/g;
+		return 1 if ($diffcount == 0);
+	}
+	return 0;	
+}
 
-
-
-
+=head
+sub com_pos {
+	my ($fir,$sec,$win) = @_;
+	if($fir != /:/ and $sec != /:/){
+		return ($fir,$sec)  if($fir - $sec < $win);
+	}else{
+		my @fir = split /:/, $fir;
+		my @sec = split /:/, $sed;
+	}
+	# ready to use
+}	
 
 
 

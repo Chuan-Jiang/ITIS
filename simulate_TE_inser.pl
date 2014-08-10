@@ -11,7 +11,8 @@ my $seq_out = Bio::SeqIO -> new(-file=> ">$genome_file.sim.fa",-format=> "fasta"
 my %te_ha = Seq::seq_hash($te_file);
 
 my $seed = 10;
-my $step= 8e6;
+my $step = 4e5;
+#my $step= 8e6; # simulate 52 insertion
 
 srand(100);
 while(my $inseq = $seq_in -> next_seq){

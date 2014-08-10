@@ -5,14 +5,15 @@ while(<>){
 	chomp;
 	my($chr,$start,$end,$res) = split(/\t/,$_,4);
 	$res =~ s/\t/,/g;
+	my $d;
 	if ($res =~ /forward/){
-		$res = "+$res";
+		$d = "+";
 	}else{
-		$res = "-$res";
+		$d = "-";
 	}
 
 	($start,$end) = sort{$a<=>$b} ($start,$end);
 	$start --;
-	print "$chr\t$start\t$end\tTIF,$res\n";
+	print "$chr\t$start\t$end\tTIF,$res\t.\t$d\n";
 }
 
