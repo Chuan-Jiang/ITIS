@@ -100,7 +100,6 @@ foreach my $grp (@aligns){  # parse each group of reads
 
 
 
-
 #######    sub functions  #######
 sub te_aln{
 	my $sam_te = shift @_;	

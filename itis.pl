@@ -30,8 +30,14 @@ my $usage = "USAGE:
 		
 		-a <10> the allow number of base can be lost during transposon
 
-		-b the total number of required supporting reads [3], minimum required supporting reads cover TE start[1], reads cover TE end[1]
-			defualt: in the form of '2,3,1,1', seperate by comma 
+		-b in the form /t=3/TS=1/TE=1/ , the minimum requried:
+			t:total reads supporting insertion  /3/
+			CS:clipped reads cover TE start site /0/
+			CE:clipped reads cover TE end site  /0/
+			cs:cross reads cover TE start  /0/
+			ce:cross reads cover TE end    /0/
+			TS:total reads cover TE start  /1/
+			TE:total reads cover TE end    /1/
 		
 		-c FORMAT:\\d,\\d,\\d; for  cpu number for 'BWA mem', 'samtools view'  and 'samtools sort'    defualt 8,2,2
 		
@@ -67,7 +73,7 @@ my $rs1_ori  = $opt{1};
 my $rs2_ori  = $opt{2};
 my $gff = $opt{f};
 
-my $min_reads  = $opt{b}?$opt{b}:"2,3,1,1";
+my $min_reads  = $opt{b}?$opt{b}:"/t=3/TS=1/TE=1/";
 my $ratio = $opt{R}?$opt{R}:"0.2";
 my $bam = $opt{B}?$opt{B}:0;
 my $depth_range= $opt{D}?$opt{D}:"2,200";
@@ -204,12 +210,12 @@ foreach my $te (@tes){
 
 	$cmd = "samtools view -buS $tmp_dir/${proj}.$te.support.reads.sam | samtools sort - $tmp_dir/${proj}.$te.support.reads.sorted ";
 	process_cmd($cmd);
-	$cmd = " samtools index   $tmp_dir/${proj}.$te.support.reads.sorted.bam " ;
+	$cmd = "samtools index   $tmp_dir/${proj}.$te.support.reads.sorted.bam " ;
 	process_cmd($cmd);
 	###### 
 
 	###### sort the support reads and generate bed files  ######
-	$cmd = " sort -k 3,3 -k 4,4n $tmp_dir/${proj}.$te.ins.loc.lst >$tmp_dir/${proj}.$te.ins.loc.sorted.lst";
+	$cmd = "sort -k 3,3 -k 4,4n $tmp_dir/${proj}.$te.ins.loc.lst >$tmp_dir/${proj}.$te.ins.loc.sorted.lst";
 	process_cmd($cmd);
 	$cmd = "perl  $bindir/transform_to_bed.pl $transformtobed_bam -e $te_seq -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
 	process_cmd($cmd);
@@ -238,7 +244,7 @@ sub process_cmd {
 		print CMD " $cmd\n\n";
 	}else{
 		print STDERR &mytime."CMD: $cmd\n";
-		print CMD &mytime."CMD: $cmd\n";
+		print CMD "$cmd\t#".&mytime."\n";
 		my $start_time = time();
 		my $ret = system($cmd);
 		my $end_time = time();

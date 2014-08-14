@@ -6,7 +6,10 @@ my %rcd;
 while(<>){
 	chomp;
 	my($chr,$s,$t) = (split /\t/, $_)[0,1,3];
-	($t) = $t =~ /^(\S+?),/;
+	if($t =~ /^(\S+?),/){
+		$t = $1;
+	}
+
 	$t = "ITIS" if ($t =~ /SR/);
 	$rcd{$chr}{$s}{$t} = 1;
 }

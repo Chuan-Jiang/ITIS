@@ -30,7 +30,9 @@ my $folder = $opt{d}?$opt{d}:'.';
 		chomp;
 		 my ($chr,$s,$e) = split /\t/,$_;
 		 if (($e - $s) > 300){
-			 die "$chr,$s,$e,haha\n";                                                                                        
+			 print STDERR "A large region: $chr,$s,$e\n";
+			 print FH "goto $chr:$s-$e\n";
+			 print FH "snapshot ${chr}_${s}_${e}.png\n";
 		 }else{
 			 my $slop = 150 - ($e - $s);
 			 my $s_p = $s - int($slop/2);
@@ -40,8 +42,7 @@ my $folder = $opt{d}?$opt{d}:'.';
 		 }
 	 }
 
-
-if($opt{a}){    #  if provided gff file, then process the following code util the end
+if($gff_file){    #  if provided gff file, then process the following code util the end
 
 ################# generate usefull gff file containg intergenic region  ##########
 

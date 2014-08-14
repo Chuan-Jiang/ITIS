@@ -143,19 +143,19 @@ for my $it ( @lsts){   # iterate to integrate other information
 
 	my($chr,$ss,$ee,$in_ha_ref,$sc,$clp_s,$clp_e,$crs_s,$crs_e,$tags,$t_s,$t_e,$dir) = @$it;
 	if($dir eq "."){
-		print STDERR "Can't determing the direction of insertion at $chr\t$ss\t$sc\n";
+		print STDERR "Can't determine  the direction of insertion at $chr\t$ss\t$sc\n";
 		next  ;     # if a cluster of reads have different diretion, discarded
 	}
 	
 	### esitimate the exact insertion site  ####
 	my ($s_p,$e_p);
-	if($clp_s and $clp_e){
+	if($clp_s and $clp_e and ($ss-$ee) == $tsd_l){
 		($s_p,$e_p) = sort {$a<=>$b} ($ss,$ee);
-	}elsif($clp_s){
+	}elsif($clp_s >= 2 ){
 		my $form = $dir.$tsd_l;
 		
 		($s_p,$e_p) = sort {$a<=>$b} ($ss,$ss-$form);
-	}elsif($clp_e){
+	}elsif($clp_e >= 2){
 		my $form = $dir.$tsd_l;
 		
 		($s_p,$e_p) = sort {$a<=>$b} ($ee,$ee+$form);
@@ -168,7 +168,7 @@ for my $it ( @lsts){   # iterate to integrate other information
 	
 		###### esitmate ratio #####
 		my ($sup,$nsup) = ("NA","NA");
-		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if($clp_s or $clp_e);
+		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if(($e_p - $s_p) == $tsd_l);
 		
 		$tags .= ";GT=$sup,$nsup";
 		######## pick the bg depth ######
@@ -244,10 +244,10 @@ sub collect_infor{          # use a cluster of support reads to determine if it 
 	my $map_q;
 	foreach my $pos (@clu){
 		($id,$d,$chr,$pos,$ty,my $mq) = split /\t/,$pos;
-		if ($ty =~ /(GS:|TS:)(\d+)/ ){
+		if ($ty =~     /(GS:|TS:)(-?\d+)/ ){
 			push @sit_s,$pos;
 			push @te_s, $2;
-		}elsif ($ty =~ /(GE:|TE:)(\d+)/){
+		}elsif ($ty =~ /(GE:|TE:)(-?\d+)/ ){
 			push @sit_e,$pos;
 			push @te_e, $2;
 		}elsif( $ty =~ /CS/ or $ty =~ /ts/){
@@ -350,6 +350,9 @@ sub median {
 
 sub estimate_homo {        # check each read pair  around  the candidate insert sites
 	my($chr,$s_r,$e_r,$in_ha_ref,$dir,$t_s,$t_e) = @_;	
+	$t_s = 0 if ($t_s eq "NA");
+	$t_e = length($te_ha{$te}) if ($t_e eq "NA");
+
 	print "\nEstimate:$chr\t$s_r\t$e_r\n" if $db;
 	my %in_ha = %$in_ha_ref;
 	my $sam_s = $s_r - $lib_l;

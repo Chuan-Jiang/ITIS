@@ -28,7 +28,7 @@ my $rec=0;
 while (<WIN>){
 	 chomp;
 	 my($s_r,$e_r,$d_r,$s,$e,$d) = (split /\t/,$_)[1,2,3,5,6,9];
-	 if($s_r != $rec){
+	 if($s != $rec){
 		 my $sign = ($d_r == 1)? "\\+":"\\-";
 		 if ($d =~ /^$sign/ or $d =~ /NA|\./){
 			 $tot_over ++;
@@ -39,7 +39,7 @@ while (<WIN>){
 	 }else{
 		 next;
 	 }
-	 $rec = $s_r;
+	 $rec = $s;
  }
 return("$tot_over","$tot_exact");
 }
