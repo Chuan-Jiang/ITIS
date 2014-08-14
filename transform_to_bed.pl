@@ -387,7 +387,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 
 		if (exists $in_ha{$id}){
 			$reads{$id} = 1;
-		}elsif($tlen < 0 and abs($tlen) < 2*$lib_l  and $cig =~ /(\d+)S$/ and $1 >= 5){
+		}elsif($tlen < 0 and abs($tlen) < 2*$lib_l  and $cig =~ /(\d+)S$/ and $1 >= 20){
 			my $l = $1;
 			my $que = substr($seq,-$l);
 			my $sub;
@@ -398,7 +398,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			}
 			#print "$id\t$que\t$sub\n";
 			$reads{$id} = 1 if( check_te($que,$sub));
-		}elsif( $tlen > 0  and abs($tlen) < 2*$lib_l and $cig =~ /^(\d+)S/ and $1 >= 5){   # at least 5 bp soft clipped to check if it is from TE
+		}elsif( $tlen > 0  and abs($tlen) < 2*$lib_l and $cig =~ /^(\d+)S/ and $1 >= 20){   # at least 20 bp soft clipped to check if it is from TE
 			my $l = $1;
 			my $que = substr($seq,0,$l);
 			my $sub;
@@ -422,7 +422,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 				}
 
 				# check if the range overlap with TE insertion site
-				if ($range[0] <= $s_r - 5 and $range[1] >= $e_r+5  and $reads{$id} >= 2 ){
+				if ($range[0] <= $s_r - 20 and $range[1] >= $e_r+20  and $reads{$id} >= 2 ){
 					$reads{$id} = 2;
 				}else{
 					$reads{$id} = 4 if ($reads{$id} >= 4);

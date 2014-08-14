@@ -32,7 +32,7 @@ my $lst = $opt{l};
 my $sr = $opt{n}? $opt{n} : '/t=3/TS=1/TE=1/';
 	my %paras = parse_sr($sr);
 
-my $MQ = $opt{q}?$opt{q}:1;
+my $MQ = defined($opt{q})?$opt{q}:1;
 my ($DP_L,$DP_H) = $opt{d}?(split ',',$opt{d}):(split ',',"2,200");
 
 open INS, "$ins_file" or die $!;
