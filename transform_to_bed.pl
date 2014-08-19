@@ -350,6 +350,8 @@ sub median {
 
 sub estimate_homo {        # check each read pair  around  the candidate insert sites
 	my($chr,$s_r,$e_r,$in_ha_ref,$dir,$t_s,$t_e) = @_;	
+	# $s_r 1 based start site of insertion
+	# $e_r 1 based end site of insertion
 	$t_s = 0 if ($t_s eq "NA");
 	$t_e = length($te_ha{$te}) if ($t_e eq "NA");
 
@@ -422,7 +424,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 				}
 
 				# check if the range overlap with TE insertion site
-				if ($range[0] <= $s_r - 20 and $range[1] >= $e_r+20  and $reads{$id} >= 2 ){
+				if ($s_r  - $range[0]  <=  20 and $range[1] >= $e_r+20  and $reads{$id} >= 2 ){
 					$reads{$id} = 2;
 				}else{
 					$reads{$id} = 4 if ($reads{$id} >= 4);

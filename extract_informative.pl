@@ -52,7 +52,7 @@ while (<SAM>){     #  reading sam file one by one
 		undef(%reads);
 		$reads{$title} = 1;
 		@rs = ($_);
-		print_clu ( @rs) if (eof(SAM));
+		print_clu(@rs) if (eof(SAM));
 	}
 }
 sub print_clu{
