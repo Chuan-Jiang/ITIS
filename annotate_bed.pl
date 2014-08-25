@@ -20,12 +20,12 @@ getopts("b:a:g:i:n:p:d:h",\%opt);
 die $usage if ($opt{h});
 my($bed_file,$gff_file,$genome_file,$te,$proj) = ($opt{b},$opt{a},$opt{g},$opt{n},$opt{p});
 my $folder = $opt{d}?$opt{d}:'.';
-
+my $wd = $ENV{'PWD'};
 
 ################ generate igv batch   #############
 	open FH,"> $folder/$proj.$te.igv.bat" or die $!;
 	open BED,"$bed_file" or die $!;
-	print FH "snapshotDirectory ./$proj.$te.snap.dir\n";
+	print FH "snapshotDirectory $wd/$proj.$te.snap.dir\n";
 	while (<BED>){
 		chomp;
 		 my ($chr,$s,$e) = split /\t/,$_;

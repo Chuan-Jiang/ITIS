@@ -412,19 +412,18 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			#print "$id\t$que\t$sub\n" if ( check_te($que,$sub));
 		    $reads{$id} = 1 if( check_te($que,$sub));
 		}else{
-			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 2*$lib_l ){	
-				
+			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 2*$lib_l ){		
 							
 				my @range;	#  determine the range of pair
 				
-				if($tlen > 0){		
+				if($tlen > 0){
 					@range = ($pos,$pos+$tlen-1);
 				}elsif($tlen < 0){
 					@range = ($npos,$npos-$tlen-1) ;
 				}
 
 				# check if the range overlap with TE insertion site
-				if ($s_r  - $range[0]  <=  20 and $range[1] >= $e_r+20  and $reads{$id} >= 2 ){
+				if ($s_r >= $range[0] + 20 and $range[1] >= $e_r + 20  and $reads{$id} >= 2 ){
 					$reads{$id} = 2;
 				}else{
 					$reads{$id} = 4 if ($reads{$id} >= 4);
@@ -465,7 +464,7 @@ sub  check_te{
 	for my $i (0..($s_l-$q_l)){
 		my $tgt = substr($sub,$i,$q_l);
 		my $diffcount = () = ($que ^ $tgt) =~ /[^\x00]/g;
-		return 1 if ($diffcount == 0);
+		return 1 if ($diffcount/$q_l <= 0.1);
 	}
 	return 0;	
 }
