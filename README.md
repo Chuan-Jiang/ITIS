@@ -1,4 +1,4 @@
-ITIS:(Identify Transposable insertion site)
+ITIS:(Identify Transposon Insertion Site)
 ==========================================
 
 require three input files:  	
