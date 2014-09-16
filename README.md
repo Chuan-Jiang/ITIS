@@ -6,7 +6,7 @@ require three input files:
 	(ii)TE sequence 
 	(iii)paired-end(PE) short reads generated from sample library in which TE have moved to other region. 
 
-By aligning read pairs to merged reference sequence, reference genome and TE sequence, ITIS will check each informative read pairs as long as it have more than 20bp overlap with TE sequence (Fig1 a) and determine if it supports the TE insertion around the location mapped by one of read pair.  In theory, by inspecting both cross read pairs and clipped reads at the same time, ITIS will have a higher sensitivity than other tools
+By aligning read pairs to merged reference sequence, reference genome and TE sequence, ITIS will check each informative read pairs as long as it have more than 20bp overlap with TE sequence and determine if it supports the TE insertion around the location mapped by one of read pair.  In theory, by inspecting both cross read pairs and clipped reads at the same time, ITIS will have a higher sensitivity than other tools
 
 
 Dependencies:
@@ -16,9 +16,11 @@ Dependencies:
 	bedtools (v 2.17.0)
 	Bio::Perl
 
+
 Using ITIS
 ==========
-runing itis pipleline:
+
+running ITIS pipleline:
 ----------------------
 perl itis.pl	
 USAGE:
@@ -71,4 +73,6 @@ USAGE:
 	
 	
 
+Arguments Explanations:
+-----------------------
 
