@@ -42,7 +42,7 @@ Comamnd Line Options
 
 perl itis.pl	
 USAGE:
-	/psc/home/jiangchuan/Code/itis.pl
+	/psc/home/jiangchuan/Code/itis.pl  
 	REQUIRED -g the genome sequence file in fasta format  
 	REQUIRED -t the TE sequence file in fasta format  
 	REQUIRED -l the average length of fragments in library  	
