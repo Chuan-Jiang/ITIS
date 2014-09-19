@@ -44,12 +44,12 @@ perl itis.pl
 USAGE:
 	/psc/home/jiangchuan/Code/itis.pl
 	REQUIRED -g the genome sequence file in fasta format  
-	REQUIRED -t the TE sequence file in fasta format
-	REQUIRED -l the average length of fragments in library	
-	REQUIRED -N the name of you project
-	REQUIRED -1 the paired read file 1
-	REQUIRED -2 the paired read file 2	
-		
+	REQUIRED -t the TE sequence file in fasta format  
+	REQUIRED -l the average length of fragments in library  	
+	REQUIRED -N the name of you project  
+	REQUIRED -1 the paired read file 1  
+	REQUIRED -2 the paired read file 2  	
+		  
 		-f gff file. if provided, ITIS will check if TE inserted in gentic or intergeneic region	 
 		-F <Y|N: default N> run scripts in 'FAST' mode; It will not align all reads to reference genome,caculate the average bg depth 
 		     and estimate if insertion is homo or heter
