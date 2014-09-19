@@ -1,30 +1,48 @@
 ITIS:(Identify Transposon Insertion Site)
 ==========================================
+is a pipeline to identify TE indertion site in genome
 
-require three input files:  	
+It require three input files:  	
 	(i) reference genome sequence, 
 	(ii)TE sequence 
-	(iii)paired-end(PE) short reads generated from sample library in which TE have moved to other region. 
+	(iii)paired-end(PE) short reads generated from sample with TE in it have moved to other region. 
 
 By aligning read pairs to merged reference sequence, reference genome and TE sequence, ITIS will check each informative read pairs as long as it have more than 20bp overlap with TE sequence and determine if it supports the TE insertion around the location mapped by one of read pair.  In theory, by inspecting both cross read pairs and clipped reads at the same time, ITIS will have a higher sensitivity than other tools
 
+---
+---
+
+
+###Table of Contents
+#### Dependencies
+#### Command line options
+#### Input files
+#### Output files
+#### Quick start
+#### Report an  Issue
+
+---
 
 Dependencies:
 ----------------
+	These programs need to be installed and the executable should be in your path:
+	
 	samtools (v 0.1.19)
 	bwa      (v 0.7.7-r441)
 	bedtools (v 2.17.0)
 	Bio::Perl
+	
+	Other usefull tool:
+	IGV
+	
+-------------
 
+Comamnd Line Options
+--------------------
 
-Using ITIS
-==========
-
-running ITIS pipleline:
-----------------------
 perl itis.pl	
 USAGE:
-	/psc/home/jiangchuan/Dropbox/Code/Code_TE_inser/itis.pl
+	/psc/home/jiangchuan/Code/itis.pl
 	REQUIRED -g the genome sequence file in fasta format  
 	REQUIRED -t the TE sequence file in fasta format
 	REQUIRED -l the average length of fragments in library	
@@ -72,6 +90,8 @@ USAGE:
 		BWA samtools should in you PATH
 	
 	
+
+
 
 Arguments Explanations:
 -----------------------
