@@ -1,11 +1,10 @@
-ITIS:(Identify Transposon Insertion Site)
-==========================================
+#ITIS:(Identify Transposon Insertion Site)<br>
 is a pipeline to identify TE indertion site in genome
 
-It require three input files:  	
-	(i) reference genome sequence, 
-	(ii)TE sequence 
-	(iii)paired-end(PE) short reads generated from sample with TE in it have moved to other region. 
+It require three input files:<br>  	
+	(i) reference genome sequence,<br> 
+	(ii)TE sequence, <br>
+	(iii)paired-end(PE) short reads generated from sample with TE in it have moved to other region.<br> 
 
 By aligning read pairs to merged reference sequence, reference genome and TE sequence, ITIS will check each informative read pairs as long as it have more than 20bp overlap with TE sequence and determine if it supports the TE insertion around the location mapped by one of read pair.  In theory, by inspecting both cross read pairs and clipped reads at the same time, ITIS will have a higher sensitivity than other tools
 
@@ -13,18 +12,18 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 ---
 
 
-###Table of Contents
-#### Dependencies
-#### Command line options
-#### Input files
-#### Output files
-#### Quick start
-#### Report an  Issue
+##Table of Contents
+### <a href="#dep">Dependencies</a><br>
+### <a href="#cmd">Command line options</a>
+### <a href="#input">Input files</a>
+### <a href="#output">Output files</a>
+### <a href="#qck">Quick start</a>
+### <a href="iss">Report an Issue</a>
 
 ---
+---
+### <a name="dep">Dependencies:
 
-Dependencies:
-----------------
 	These programs need to be installed and the executable should be in your path:
 	
 	samtools (v 0.1.19)
@@ -37,10 +36,10 @@ Dependencies:
 	
 -------------
 
-Comamnd Line Options
+### <a name="cmd">Comamnd Line Options
 --------------------
 
-#####perl itis.pl	
+#### perl itis.pl	
 
 USAGE:
 	#####/psc/home/jiangchuan/Code/itis.pl  
@@ -96,6 +95,27 @@ USAGE:
 
 
 
-Arguments Explanations:
+#### Arguments Explanations:
+
 -----------------------
+
+### <a name="#input">Input files
+
+
+------------
+
+### <a name="#output">Output files
+
+-------------
+
+### <a name="#qck">Quick start
+
+-------------
+
+### <a name="#iss">Report an Issue
+
+-----------
+
+
+
 
