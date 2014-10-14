@@ -14,7 +14,7 @@ my $help = "$0
 			TS:total reads cover TE start  /1/
 			TE:total reads cover TE end    /1/
 	-q : degault <1>, the minimum required average mapping quality
-	-d : default <2-200>, the reads depth range
+	-d : default <2,200>, the reads depth range
 	-h : help message
 	";
 

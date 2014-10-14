@@ -2,6 +2,8 @@
 use warnings; use strict;
 use Getopt::Std;
 use Seq;
+use FindBin;
+
 ############## parameters ##############
 my %opt;
 my $usage = "$0
@@ -18,6 +20,8 @@ my $usage = "$0
 	-h : help
 	-d : swithh on debug model
 	";
+
+my $bindir="$FindBin::Bin";
 
 die $usage if (@ARGV == 0);
 getopts("p:i:b:w:n:l:e:hd",\%opt);
@@ -170,7 +174,24 @@ for my $it ( @lsts){   # iterate to integrate other information
 		my ($sup,$nsup) = ("NA","NA");
 		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if(($e_p - $s_p) == $tsd_l);
 		
-		$tags .= ";GT=$sup,$nsup";
+		my $pva;
+		if($sup =~ /NA/ or $nsup =~ /NA/){
+			$pva = "NA";
+		}else{
+			$pva = `Rscript $bindir/genotype_caculator.r $sup $nsup`;
+			if($?){
+				print " Calculat genome type pvalue error : $sup  $nsup!\n";
+			}
+		}
+		my $gt;
+		if($pva eq "NA"){
+			$gt = "NA";
+		}elsif($pva >= 0.01){
+			$gt="Heter";
+		}elsif($pva < 0.01){
+			$gt="Homo";
+		}
+		$tags .= ";GT=$sup,$nsup:$gt;PV=$pva";
 		######## pick the bg depth ######
 		
 		my $pad = int((100- ($e_p-$s_p))/2);
