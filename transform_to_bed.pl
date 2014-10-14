@@ -171,8 +171,8 @@ for my $it ( @lsts){   # iterate to integrate other information
 	if ($bam){		
 	
 		###### esitmate ratio #####
-		my ($sup,$nsup) = ("NA","NA");
-		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if(($e_p - $s_p) == $tsd_l);
+		my ($sup,$nsup,$noise) = ("NA","NA","NA");
+		($sup,$nsup,$noise) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if(($e_p - $s_p) == $tsd_l);
 		
 		my $pva;
 		if($sup =~ /NA/ or $nsup =~ /NA/){
@@ -191,7 +191,7 @@ for my $it ( @lsts){   # iterate to integrate other information
 		}elsif($pva < 0.01){
 			$gt="Homo";
 		}
-		$tags .= ";GT=$sup,$nsup:$gt;PV=$pva";
+		$tags .= ";GT=$sup,$nsup,$noise:$gt;PV=$pva";
 		######## pick the bg depth ######
 		
 		my $pad = int((100- ($e_p-$s_p))/2);
@@ -420,7 +420,11 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 				$sub = Seq::rev_com(substr($te_ha{$te},$t_e-$l-5,$l+5));
 			}
 			#print "$id\t$que\t$sub\n";
-			$reads{$id} = 1 if( check_te($que,$sub));
+			if(check_te($que,$sub)){
+				$reads{$id} = 1 ;
+			}else{
+				$reads{$id} = 3 ;
+			}
 		}elsif( $tlen > 0  and abs($tlen) < 2*$lib_l and $cig =~ /^(\d+)S/ and $1 >= 20){   # at least 20 bp soft clipped to check if it is from TE
 			my $l = $1;
 			my $que = substr($seq,0,$l);
@@ -431,7 +435,11 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 				$sub = Seq::rev_com(substr($te_ha{$te},$t_s-1,$l+5));
 			}
 			#print "$id\t$que\t$sub\n" if ( check_te($que,$sub));
-		    $reads{$id} = 1 if( check_te($que,$sub));
+		    if( check_te($que,$sub)){
+				$reads{$id} = 1;
+			}else{
+				$reads{$id} = 3 ;
+			}
 		}else{
 			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 2*$lib_l ){		
 							
@@ -458,6 +466,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 	}
 	my $sup = 0;
 	my $nsup = 0 ;
+	my $noise = 0;
 	my (@sup_r,@nsup_r) if $db;
 	while(my ($k,$v) = each %reads){
 		if($v == 1){
@@ -466,15 +475,19 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 		}elsif($v == 2){
 			push @nsup_r, $k if $db;
 			$nsup ++;
+		}elsif($v == 3){
+			$noise ++;
 		}
 	}
 	if($db){
 		print "SUP: @sup_r\n";
 		print "NSUP: @nsup_r\n";
 	}
-	return ($sup,$nsup);
+	return ($sup,$nsup,$noise);
 
 }
+
+
 sub  check_te{
 	my ($que,$sub) = @_;
 	$que = uc($que);
