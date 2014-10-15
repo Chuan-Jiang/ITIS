@@ -20,7 +20,7 @@ foreach my $chr(keys %rcd){
 	my %sub_ha = %$st;
 
 	my $l_k=0;
-	foreach my $k( sort {$a<=>$b} keys %sub_ha){
+	foreach my $k( sort {$a<=>$b} keys %sub_ha){   # $k contain the name of chromosome
 		my $v = $sub_ha{$k};
 		my @ts = keys (%$v);
 		if ($k - $l_k  < 1000){
@@ -38,6 +38,8 @@ foreach my $chr(keys %rcd){
 
 foreach my $tool ( keys %lst){
 	my @locs = @{$lst{$tool}};
+	my $num = @locs;
+	print STDERR "#$tool\t$num\n";
 	print "$tool\t".(join "\t", @locs) . "\n";
 }
 

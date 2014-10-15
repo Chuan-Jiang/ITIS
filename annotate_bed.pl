@@ -13,7 +13,7 @@ my $usage =   "USAGE:
 	-n the name of your retrotransposon name   {REQUIRED}
 	-p the prefix you project                  {REQUIRED}
 	-h print this help infor                    
-	-d the directory contain your results      Default: "." 
+	-d the directory contain your results      Default: Current directory 
 	" ;
 die $usage if (@ARGV == 0);
 getopts("b:a:g:i:n:p:d:h",\%opt);

@@ -422,8 +422,6 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			#print "$id\t$que\t$sub\n";
 			if(check_te($que,$sub)){
 				$reads{$id} = 1 ;
-			}else{
-				$reads{$id} = 3 ;
 			}
 		}elsif( $tlen > 0  and abs($tlen) < 2*$lib_l and $cig =~ /^(\d+)S/ and $1 >= 20){   # at least 20 bp soft clipped to check if it is from TE
 			my $l = $1;
@@ -437,8 +435,6 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			#print "$id\t$que\t$sub\n" if ( check_te($que,$sub));
 		    if( check_te($que,$sub)){
 				$reads{$id} = 1;
-			}else{
-				$reads{$id} = 3 ;
 			}
 		}else{
 			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 2*$lib_l ){		
@@ -455,19 +451,17 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 				if ($s_r >= $range[0] + 20 and $range[1] >= $e_r + 20  and $reads{$id} >= 2 ){
 					$reads{$id} = 2;
 				}else{
-					$reads{$id} = 4 if ($reads{$id} >= 4);
+					$reads{$id} = 3 if ($reads{$id} >= 3);
 				}
-			}elsif($nchr eq $te){
-				$reads{$id} = 3 if ($reads{$id} >= 3);
 			}else{
-				$reads{$id} = 4 if ($reads{$id} >= 4);
+				$reads{$id} = 3 if ($reads{$id} >= 3);
 			}
 		}
 	}
 	my $sup = 0;
 	my $nsup = 0 ;
 	my $noise = 0;
-	my (@sup_r,@nsup_r) if $db;
+	my (@sup_r,@nsup_r,@noi) if $db;
 	while(my ($k,$v) = each %reads){
 		if($v == 1){
 			push @sup_r, $k if $db;
@@ -476,12 +470,15 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			push @nsup_r, $k if $db;
 			$nsup ++;
 		}elsif($v == 3){
+			push @noi,    $k if $db;
 			$noise ++;
 		}
 	}
 	if($db){
 		print "SUP: @sup_r\n";
 		print "NSUP: @nsup_r\n";
+		print "NOIs: @noi\n";
+
 	}
 	return ($sup,$nsup,$noise);
 
