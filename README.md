@@ -95,10 +95,10 @@ USAGE:
 
 ### <a name="#qck">Quick start with a sample dataset
 
-First of all, untar the sample dataset:   
+First of all, untar the sample dataset:      
+ 
     cd test_dir
-    tar xvzf sample_data.tar.gz
-
+    tar xvzf sample_data.tar.gz     
 
 ####Input Files  
 
