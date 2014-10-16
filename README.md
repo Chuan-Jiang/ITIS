@@ -41,7 +41,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 #### perl itis.pl	
 
 USAGE:
-	/psc/home/jiangchuan/Code/itis.pl  
+    /psc/home/jiangchuan/Code/itis.pl  
 	
 	
 	REQUIRED -g the genome sequence file in fasta format  
@@ -94,6 +94,10 @@ USAGE:
 -------------
 
 ### <a name="#qck">Quick start with a sample dataset
+
+First of all, untar the sample dataset:  
+    cd test_dir
+    tar xvzf sample_data.tar.gz
 
 
 ####Input Files  
