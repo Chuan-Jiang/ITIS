@@ -172,7 +172,7 @@ for my $it ( @lsts){   # iterate to integrate other information
 	
 		###### esitmate ratio #####
 		my ($sup,$nsup,$noise) = ("NA","NA","NA");
-		($sup,$nsup,$noise) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if(($e_p - $s_p) == $tsd_l);
+		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if(($e_p - $s_p) == $tsd_l);
 		
 		my $pva;
 		if($sup =~ /NA/ or $nsup =~ /NA/){
@@ -191,7 +191,7 @@ for my $it ( @lsts){   # iterate to integrate other information
 		}elsif($pva < 0.01){
 			$gt="Homo";
 		}
-		$tags .= ";GT=$sup,$nsup,$noise:$gt;PV=$pva";
+		$tags .= ";GT=$sup,$nsup:$gt;PV=$pva";
 		######## pick the bg depth ######
 		
 		my $pad = int((100- ($e_p-$s_p))/2);
@@ -450,18 +450,13 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 				# check if the range overlap with TE insertion site
 				if ($s_r >= $range[0] + 20 and $range[1] >= $e_r + 20  and $reads{$id} >= 2 ){
 					$reads{$id} = 2;
-				}else{
-					$reads{$id} = 3 if ($reads{$id} >= 3);
 				}
-			}else{
-				$reads{$id} = 3 if ($reads{$id} >= 3);
 			}
 		}
 	}
 	my $sup = 0;
-	my $nsup = 0 ;
-	my $noise = 0;
-	my (@sup_r,@nsup_r,@noi) if $db;
+	my $nsup = 0;
+	my (@sup_r,@nsup_r) if $db;
 	while(my ($k,$v) = each %reads){
 		if($v == 1){
 			push @sup_r, $k if $db;
@@ -469,18 +464,14 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 		}elsif($v == 2){
 			push @nsup_r, $k if $db;
 			$nsup ++;
-		}elsif($v == 3){
-			push @noi,    $k if $db;
-			$noise ++;
 		}
 	}
 	if($db){
 		print "SUP: @sup_r\n";
 		print "NSUP: @nsup_r\n";
-		print "NOIs: @noi\n";
 
 	}
-	return ($sup,$nsup,$noise);
+	return ($sup,$nsup);
 
 }
 

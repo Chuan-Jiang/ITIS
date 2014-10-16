@@ -15,9 +15,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 ##Table of Contents
 ### <a href="#dep">Dependencies</a><br>
 ### <a href="#cmd">Command line options</a>
-### <a href="#input">Input files</a>
-### <a href="#output">Output files</a>
-### <a href="#qck">Quick start</a>
+### <a href="#qck">Quick start with a sample dataset</a>
 ### <a href="iss">Report an Issue</a>
 
 ---
@@ -30,6 +28,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 	bwa      (v 0.7.7-r441)
 	bedtools (v 2.17.0)
 	Bio::Perl
+	R
 	
 	Other usefull tool:
 	IGV
@@ -42,7 +41,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 #### perl itis.pl	
 
 USAGE:
-	#####/psc/home/jiangchuan/Code/itis.pl  
+	/psc/home/jiangchuan/Code/itis.pl  
 	
 	
 	REQUIRED -g the genome sequence file in fasta format  
@@ -84,31 +83,20 @@ USAGE:
 		
 		-m <Y|N: default F> Only print out all commands to STDERR
 	         
-		-h print STDERR this help message    
+		-h print this help message    
 
 	
-		eg: perl /psc/home/jiangchuan/Dropbox/Code/Code_TE_inser/itis.pl -g genome.fa -t tnt1.fa -l 300  -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
+		eg: perl itis.pl -g genome.fa -t tnt1.fa -l 300  -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
 
 		BWA samtools should in you PATH
-	
-	
 
-
-
-#### Arguments Explanations:
-
------------------------
-
-### <a name="#input">Input files
-
-
-------------
-
-### <a name="#output">Output files
 
 -------------
 
-### <a name="#qck">Quick start
+### <a name="#qck">Quick start with a sample dataset
+
+
+####Input Files  
 
 -------------
 
