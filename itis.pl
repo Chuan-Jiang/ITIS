@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl 
 use warnings; use strict;
 use FindBin;
 use Getopt::Std;
@@ -50,7 +50,7 @@ my $usage = "USAGE:
 		-h print STDERR this help message    
 
 	
-		eg: perl $0 -g genome.fa -t tnt1.fa -l 300 -n tnt1 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
+		eg: perl  $0 -g genome.fa -t tnt1.fa -l 300 -n tnt1 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
 
 		BWA samtools should in you PATH
 	
@@ -107,7 +107,7 @@ if($exists =~ /N/i){
 	$para_filter = "";
 	$cmd = "cat $genome $te_seq >$tmp_dir/$proj.ref_and_te.fa";
 }else{
-	$cmd = "perl $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -p $tmp_dir/te_homo_in_ref.lst -o $tmp_dir/$proj.ref_and_te.fa";
+	$cmd = "perl -I $bindir $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -p $tmp_dir/te_homo_in_ref.lst -o $tmp_dir/$proj.ref_and_te.fa";
 	$para_filter = "-l $tmp_dir/te_homo_in_ref.lst";
 }
 
@@ -154,7 +154,7 @@ if($fast =~ /N/i and $bam == 0){
 
 ##### firstly extracting reads aligned at TE#####
 
-$cmd = "perl $bindir/lean_fq.pl -1 $rs1_ori -2 $rs2_ori -p $tmp_dir/rds_te -i $tmp_dir/$te_base -c $cpu_bwa "; 
+$cmd = "perl -I $bindir $bindir/lean_fq.pl -1 $rs1_ori -2 $rs2_ori -p $tmp_dir/rds_te -i $tmp_dir/$te_base -c $cpu_bwa "; 
 process_cmd($cmd);
 my $rds = "$tmp_dir/rds_te.fq1 $tmp_dir/rds_te.fq2";
 
@@ -189,9 +189,9 @@ foreach my $te (@tes){
 
 	########## extract informative reads from sam file  ###############
 
-	$cmd = "perl $bindir/extract_informative.pl -s $tmp_dir/$proj.ref_and_te.sam  -n $te -p $tmp_dir/$proj  "; 
+	$cmd = "perl -I $bindir $bindir/extract_informative.pl -s $tmp_dir/$proj.ref_and_te.sam  -n $te -p $tmp_dir/$proj  "; 
 	process_cmd($cmd);
-	$cmd = "perl $bindir/modify_informative.pl $tmp_dir/$proj.$te.informative.sam > $tmp_dir/$proj.$te.informative.full.sam";
+	$cmd = "perl -I $bindir $bindir/modify_informative.pl $tmp_dir/$proj.$te.informative.sam > $tmp_dir/$proj.$te.informative.full.sam";
 	process_cmd($cmd);
 	$cmd = "samtools view -buS $tmp_dir/$proj.$te.informative.sam | samtools sort - $tmp_dir/$proj.$te.informative.sorted";
 	process_cmd($cmd);
@@ -200,12 +200,12 @@ foreach my $te (@tes){
 
 
 	#######   raln the informative reads back to the TE sequence  ###########
-	$cmd = "perl $bindir/te_realin_bwa.pl -n $te -s $tmp_dir/$proj.$te.informative.full.sam -i $tmp_dir/$te_base -p $tmp_dir/$proj";
+	$cmd = "perl -I $bindir $bindir/te_realin_bwa.pl -n $te -s $tmp_dir/$proj.$te.informative.full.sam -i $tmp_dir/$te_base -p $tmp_dir/$proj";
 	process_cmd($cmd);
 
 
 	######  identify the reads support insertion  #####
-	$cmd = "perl $bindir/identity_inser_sites.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
+	$cmd = "perl -I $bindir $bindir/identity_inser_sites.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
 	process_cmd($cmd);
 
 	$cmd = "samtools view -buS $tmp_dir/${proj}.$te.support.reads.sam | samtools sort - $tmp_dir/${proj}.$te.support.reads.sorted ";
@@ -217,15 +217,15 @@ foreach my $te (@tes){
 	###### sort the support reads and generate bed files  ######
 	$cmd = "sort -k 3,3 -k 4,4n $tmp_dir/${proj}.$te.ins.loc.lst >$tmp_dir/${proj}.$te.ins.loc.sorted.lst";
 	process_cmd($cmd);
-	$cmd = "perl  $bindir/transform_to_bed.pl $transformtobed_bam -e $te_seq -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
+	$cmd = "perl -I $bindir  $bindir/transform_to_bed.pl $transformtobed_bam -e $te_seq -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
 	process_cmd($cmd);
 
-	$cmd = "perl $bindir/filter_insertion.pl $para_filter -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q  -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";
+	$cmd = "perl -I $bindir $bindir/filter_insertion.pl $para_filter -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q  -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";
 	process_cmd($cmd);
 
 	#####  Intergrate gene information in GFF and generate IGV snpshot batch file  ####
 	if($gff){
-		$cmd = "perl $bindir/annotate_bed.pl -b $tmp_dir/$proj.$te.filtered.bed  -a $gff -g $tmp_dir/$proj.ref_and_te.fa  -n $te -p $proj  -d $tmp_dir "; 
+		$cmd = "perl -I $bindir $bindir/annotate_bed.pl -b $tmp_dir/$proj.$te.filtered.bed  -a $gff -g $tmp_dir/$proj.ref_and_te.fa  -n $te -p $proj  -d $tmp_dir "; 
 		process_cmd($cmd);
 	}
 }

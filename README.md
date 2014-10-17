@@ -22,7 +22,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 ---
 ### <a name="dep">Dependencies:
 
-	These programs need to be installed and the executable should be in your path:
+   The following programs need to be installed and the executable should be in your path:
 	
 	samtools (v 0.1.19)
 	bwa      (v 0.7.7-r441)
@@ -96,6 +96,7 @@ USAGE:
 ### <a name="#qck">Quick start with a sample dataset
 
 First of all, untar the sample dataset:       
+    
     cd test_dir
     tar xvzf sample_data.tar.gz     
 
