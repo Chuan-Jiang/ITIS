@@ -90,6 +90,7 @@ my $map_q = $opt{q}?$opt{q}:1;
 my $lost = $opt{a}?$opt{a}:10;
 ##########################################################
   
+open CMD, ">$tmp_dir/commands_rcd" or die $!;
 
 
 if(-e $tmp_dir){
@@ -100,7 +101,6 @@ if(-e $tmp_dir){
 }
 
 ####################### prepare template #########
-open CMD, ">$tmp_dir/commands_rcd";
 
 my $para_filter;
 if($exists =~ /N/i){
