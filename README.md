@@ -16,7 +16,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 ### <a href="#dep">Dependencies</a><br>
 ### <a href="#cmd">Command line options</a>
 ### <a href="#qck">Quick start with a sample dataset</a>
-### <a href="iss">Report an Issue</a>
+### <a href="#iss">Report an Issue</a>
 
 ---
 ---
@@ -36,6 +36,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 -------------
 
 ### <a name="cmd">Comamnd Line Options
+
 --------------------
 
 #### perl itis.pl	
@@ -92,6 +93,7 @@ USAGE:
 
 
 -------------
+
 
 ### <a name="#qck">Quick start with a sample dataset
 
