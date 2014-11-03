@@ -53,7 +53,7 @@ my $db = $opt{d};
 
 open INS,$ins_file or die $!;
 open OUT_R, ">$proj.raw.bed" or die $!;
-
+#open OUT_BG, ">$proj.bg.txt" or die $!;
 
 
 ###################################
@@ -96,13 +96,13 @@ while(<INS>){	# iterate the lst file and get tsd information and candidate inser
 		if(eof(INS)){
 			my($tsd,$inf) = collect_infor(\@clus,\%dirs);
 			print "CLU:@clus\n" if $db;
-			push @tsds,$tsd if $tsd>0;
+			push @tsds,$tsd if $tsd != -999;
 			push @lsts, $inf;
 		}
 	}else{
 		my($tsd,$inf) = collect_infor(\@clus,\%dirs);
 		print "CLU:@clus\n" if $db;
-		push @tsds,$tsd if $tsd >0;
+		push @tsds,$tsd if $tsd != -999;
 		push @lsts, $inf;
 
 		undef(%dirs);
@@ -112,7 +112,7 @@ while(<INS>){	# iterate the lst file and get tsd information and candidate inser
 		if (eof(INS)){
 			print "CLU:@clus\n" if $db;
 			my($tsd,$inf) = collect_infor(\@clus,\%dirs);
-			push @tsds,$tsd  if $tsd >0;
+			push @tsds,$tsd  if $tsd != -999;
 			push @lsts, $inf;
 		}
 	}
@@ -136,10 +136,15 @@ sub rcd_it{
 
 
 # get the most of tsd length
-my $tsd_l = mode(@tsds);
-$tsd_l++;
-print STDERR "Estimate the length of TSD is $tsd_l bp\n";
-$tsd_l--;
+my $tsd_l ;
+if(@tsds){
+	$tsd_l = mode(@tsds); 
+	$tsd_l++;
+	print STDERR "Estimate the length of TSD is $tsd_l bp\n";
+	$tsd_l--;
+}else{
+	print STDERR "Can't determine the length TSD, because there are no clipped aligned reads\n";
+}
 
 
 # check each  candidate insertion
@@ -151,36 +156,46 @@ for my $it ( @lsts){   # iterate to integrate other information
 		next  ;     # if a cluster of reads have different diretion, discarded
 	}
 	
+
+	my $sign = $dir eq "+"? 1:-1;
+
 	### esitimate the exact insertion site  ####
 	my ($s_p,$e_p);
-	if($clp_s and $clp_e and ($ss-$ee) == $tsd_l){
-		($s_p,$e_p) = sort {$a<=>$b} ($ss,$ee);
-	}elsif($clp_s >= 2 ){
-		my $form = $dir.$tsd_l;
-		
-		($s_p,$e_p) = sort {$a<=>$b} ($ss,$ss-$form);
-	}elsif($clp_e >= 2){
-		my $form = $dir.$tsd_l;
-		
-		($s_p,$e_p) = sort {$a<=>$b} ($ee,$ee+$form);
+	if($clp_s and $clp_e and $sign*($ss-$ee) == $tsd_l){
+		($s_p,$e_p) = ($ss,$ee);
+	}elsif($clp_s >= 1 ){
+		($s_p,$e_p) = ($ss,$ss-$sign*$tsd_l);
+	}elsif($clp_e >= 1 ){
+		($s_p,$e_p) = ($ee+$sign*$tsd_l,$ee);
 	}else{
 		($s_p,$e_p) = deter_ord($ss,$ee);
 	}
-
+	
+	if($sign == 1){
+		$e_p --;
+	}elsif($sign == -1){
+		$s_p --;
+	}
+	($s_p,$e_p) = sort {$a <=> $b} ($s_p,$e_p);
+	
 	##  if bam exists, calculate bg depth and esimate homo or hetero
 	if ($bam){		
 	
 		###### esitmate ratio #####
 		my ($sup,$nsup,$noise) = ("NA","NA","NA");
-		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if(($e_p - $s_p) == $tsd_l);
-		
+		($sup,$nsup) = estimate_homo($chr,$s_p,$e_p,$in_ha_ref,$dir,$t_s,$t_e) if($clp_s or $clp_e);
+		#
+		#$in_ha_ref : supportive reads
+		#
+
 		my $pva;
 		if($sup =~ /NA/ or $nsup =~ /NA/){
 			$pva = "NA";
 		}else{
-			$pva = `Rscript $bindir/genotype_caculator.r $sup $nsup`;
+			my $half = int($sup / 2  + 1);
+			$pva = `Rscript $bindir/genotype_caculator.r $half $nsup`;
 			if($?){
-				print " Calculat genome type pvalue error : $sup  $nsup!\n";
+				print " Calculate genome type pvalue error : $sup  $nsup!\n";
 			}
 		}
 		my $gt;
@@ -216,7 +231,6 @@ for my $it ( @lsts){   # iterate to integrate other information
 		$tags .= ";DP=$dep";
 	}
 	print "$chr\t$s_p\t$e_p\t$tags\t.\t$dir\n" if $db;
-	$s_p --;
 	print OUT_R  "$chr\t$s_p\t$e_p\t$tags;TS=$t_s;TE=$t_e\t.\t$dir\n";
 }
 
@@ -248,8 +262,8 @@ sub collect_infor{          # use a cluster of support reads to determine if it 
 		($dir) = keys %dirs;
 		$dir = ($dir eq "S")?"+":"-";
 	}
-
-
+    # direction is now in variable $dir
+    
 	###		determine the insertion site
 	my $sc = scalar @clu;      # $sc    :     the number of support reads
 
@@ -285,7 +299,7 @@ sub collect_infor{          # use a cluster of support reads to determine if it 
 	             
 	### collet exact insert pos 
 	
-	my $ss;	  # start site at genome
+	my $ss;	  # site in genome  cover TE start
 	if (@sit_s){
 		$ss = mode(@sit_s);
 	}elsif(@rou_s) {
@@ -294,7 +308,7 @@ sub collect_infor{          # use a cluster of support reads to determine if it 
 		$ss = 0;
 	}
 
-	my $ee;   #  end site at genome
+	my $ee;   #  site in genome cover TE end 
 	if (@sit_e){
 		$ee = mode(@sit_e);
 	}elsif (@rou_e){
@@ -320,7 +334,14 @@ sub collect_infor{          # use a cluster of support reads to determine if it 
 	my($clp_s,$clp_e,$crs_s,$crs_e) = (scalar@sit_s,scalar@sit_e,scalar@rou_s,scalar@rou_e);
 	my $SR = join ",", $num_fg,$sc,$clp_s,$clp_e,$crs_s,$crs_e;  #  in the order of 'Reads support Start and End'. Fragment suported Start and End
 	
-	my $tsd_l = (@sit_s and @sit_e)?abs($ss-$ee)	: 0;
+	my $tsd_l;
+	if($dir eq "+" and @sit_s and @sit_e){
+		$tsd_l = $ss- $ee;
+	}elsif($dir eq "-" and @sit_s and @sit_e){
+		$tsd_l = $ee - $ss;
+	}else{
+		$tsd_l = -999;
+	}
 	return($tsd_l,[$chr,$ss,$ee,\%in_ha,$sc,$clp_s,$clp_e,$crs_s,$crs_e,"SR=$SR;MQ=$map_q;NM=$te",$t_s,$t_e,$dir]);
 }
 
@@ -338,10 +359,10 @@ sub deter_ord{
 	if ($aa * $bb == 0){     # if juction of one side is determined
 		$ar = ($aa != 0)?abs($aa):abs($bb);
 		$br = ($bb != 0)?abs($bb):abs($aa);
-		return($ar-1,$br);
+		return($ar,$br);
 	}else{
 		($ar,$br) = sort {$a <=> $b} (abs($aa),abs($bb));
-		return ($ar-1,$br);
+		return ($ar,$br);
 	}
 }
 
@@ -406,11 +427,12 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 		#  1 :  support insertion
 		#  2 :  support excision
 		#  3 :  flank reads 
-		#  4 :  discarded support reads
+		#  4 :  discarded reads
 
 		if (exists $in_ha{$id}){
 			$reads{$id} = 1;
 		}elsif($tlen < 0 and abs($tlen) < 2*$lib_l  and $cig =~ /(\d+)S$/ and $1 >= 20){
+			  ####alined reads with soft clipped ends to test if it support insertion###
 			my $l = $1;
 			my $que = substr($seq,-$l);
 			my $sub;
@@ -421,9 +443,13 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			}
 			#print "$id\t$que\t$sub\n";
 			if(check_te($que,$sub)){
+				print STDERR "Have find a new support reads $r\n";
 				$reads{$id} = 1 ;
+			}else{
+				print STDERR "A noise bg reads: $r\n";
 			}
 		}elsif( $tlen > 0  and abs($tlen) < 2*$lib_l and $cig =~ /^(\d+)S/ and $1 >= 20){   # at least 20 bp soft clipped to check if it is from TE
+				####aligned reads with sfor clipped ends to test if it support insertion###
 			my $l = $1;
 			my $que = substr($seq,0,$l);
 			my $sub;
@@ -434,7 +460,10 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			}
 			#print "$id\t$que\t$sub\n" if ( check_te($que,$sub));
 		    if( check_te($que,$sub)){
+				print STDERR "Have find a new support reads $r\n";
 				$reads{$id} = 1;
+			}else{
+				print STDERR "A noise bg reads: $r\n";
 			}
 		}else{
 			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 2*$lib_l ){		

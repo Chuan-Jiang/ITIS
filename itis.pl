@@ -90,16 +90,16 @@ my $map_q = $opt{q}?$opt{q}:1;
 my $lost = $opt{a}?$opt{a}:10;
 ##########################################################
   
-open CMD, ">$tmp_dir/commands_rcd" or die $!;
 
 
 if(-e $tmp_dir){
 	print "using dir: $tmp_dir\n";
 }else{
 	$cmd = "mkdir $tmp_dir";
-	process_cmd($cmd);					# temperate folder contain intermidiate files
+	system($cmd) == 0 or die $!;
 }
 
+open CMD, ">$tmp_dir/commands_rcd" or die $!;
 ####################### prepare template #########
 
 my $para_filter;

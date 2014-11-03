@@ -12,6 +12,7 @@ while (<GENE>){
 	my@ar = split /\t/;
 	if ($ar[2] =~ /exon/){
 		$hits{$ar[9],$ar[10],$ar[11]}{0} = "exon";
+		next;
 	}elsif($ar[2] =~ /gene/){
 		$hits{$ar[9],$ar[10],$ar[11]}{0} = "gene";
 	}
