@@ -96,7 +96,7 @@ USAGE:
 
 
 ### <a name="#qck">Quick start with a sample dataset
-this test dataset derived from the genome resequencing project of Japonica A123(SRR631734), which have transposn mping activted.
+this test dataset derived from the genome resequencing project of Japonica A123(SRR631734), which have transposon mping be activted.
 
 All PE reads mapped at chr1:1-2000000 were extracted and saved in file sample.fq1 and sample.fq2. 
 
