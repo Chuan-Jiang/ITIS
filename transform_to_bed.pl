@@ -53,8 +53,11 @@ my $db = $opt{d};
 
 open INS,$ins_file or die $!;
 open OUT_R, ">$proj.raw.bed" or die $!;
-#open OUT_BG, ">$proj.bg.txt" or die $!;
+open OUT_BG, ">$proj.bg.sam" or die $!;
 
+open HEA,"samtools view -H $bam |";
+print  OUT_BG $_ while (<HEA>);
+close HEA;
 
 ###################################
 ####### read through ins.loc.lst###
@@ -411,11 +414,13 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 	}	
 	###iterate each read pair
 	my %reads;
-	print "SAMVIEW:samtools view -X $bam $chr:$sam_s-$sam_e\n" if $db;
-	open my $sam, "samtools view -X $bam $chr:$sam_s-$sam_e | " or die $!;
+	print "SAMVIEW:samtools view -h -X $bam $chr:$sam_s-$sam_e\n" if $db;
+	open my $sam, "samtools view -h -X $bam $chr:$sam_s-$sam_e | " or die $!;
 	while(<$sam>){
 		chomp;
-		next if (/^@/);
+		if (/^@/){
+			next;
+		}
 		my $r = $_;
 		my ( $id,$tag,$chr,$pos,$mq,$cig,$nchr,$npos,$tlen,$seq) = (split /\t/,$r)[0,1,2,3,4,5,6,7,8,9];
 		print "RD: $r\n" if $db;
@@ -443,10 +448,8 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			}
 			#print "$id\t$que\t$sub\n";
 			if(check_te($que,$sub)){
-				print STDERR "Have find a new support reads $r\n";
+				#print STDERR "Have find a new support reads $r\n";
 				$reads{$id} = 1 ;
-			}else{
-				print STDERR "A noise bg reads: $r\n";
 			}
 		}elsif( $tlen > 0  and abs($tlen) < 2*$lib_l and $cig =~ /^(\d+)S/ and $1 >= 20){   # at least 20 bp soft clipped to check if it is from TE
 				####aligned reads with sfor clipped ends to test if it support insertion###
@@ -460,10 +463,8 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 			}
 			#print "$id\t$que\t$sub\n" if ( check_te($que,$sub));
 		    if( check_te($que,$sub)){
-				print STDERR "Have find a new support reads $r\n";
+				#print STDERR "Have find a new support reads $r\n";
 				$reads{$id} = 1;
-			}else{
-				print STDERR "A noise bg reads: $r\n";
 			}
 		}else{
 			if($nchr eq "=" and $tlen != 0 and abs($tlen) < 2*$lib_l ){		
@@ -479,6 +480,7 @@ sub estimate_homo {        # check each read pair  around  the candidate insert 
 				# check if the range overlap with TE insertion site
 				if ($s_r >= $range[0] + 20 and $range[1] >= $e_r + 20  and $reads{$id} >= 2 ){
 					$reads{$id} = 2;
+					print OUT_BG "$r\n";
 				}
 			}
 		}

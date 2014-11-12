@@ -96,20 +96,53 @@ USAGE:
 
 
 ### <a name="#qck">Quick start with a sample dataset
+this test dataset derived from the genome resequencing project of Japonica A123(SRR631734), which have transposn mping activted.
+
+All PE reads mapped at chr1:1-2000000 were extracted and saved in file sample.fq1 and sample.fq2. 
 
 First of all, untar the sample dataset:       
     
     cd test_dir
     tar xvzf sample_data.tar.gz     
 
-
 ####Input Files  
+	PE reads:
+		sample.fq1
+		sample.fq1
+	reference genome:
+		rice_chr1_200k.fa
+	Transposon sequence:
+		mping.fa
+
+####command to detect mping insertions in reference genome
+	perl path/to/itis.pl -g rice_chr1_200k.fa -t mping.fa  -l 500 -N test -1 sample.fq1  -2 sample.fq2 -e Y
+
+	*-e Y : to tell itis.pl that there are mping homologou sequence in reference genome
+
+####Output Files
+	itis will produce a lot of files in a directory named test.[aStringOfNumbers]
+	
+	The important files included:
+
+		test.mping.filtered.bed  
+			This is a list of confident insertion sites. 
+		test.mping.raw.bed  
+			This is all insertion sites 
+		test.mping.support.reads.sam and test.mping.support.reads.sorted.bam
+			This is alignment file of all supportive reads
+		test.all_reads_aln_ref_and_te.sort.bam
+			This is alignment file of all reads
+		commands_rcd
+			A record of all the command used by itis.pl to identify TE insertions.
+	
+	If you want to filter the raw insertion list by personalized criteria, you can rerun the script filter_insertion.pl, just as shown in command_rcd
+
 
 	
 -------------
 
 ### <a name="#iss">Report an Issue
-
+If you have any questions or suggestion, please feel free to contact me :chjiang at sibs.ac.cn
 -----------
 
 
