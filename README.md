@@ -115,10 +115,9 @@ First of all, untar the sample dataset:
 		mping.fa
 
 ####command to detect mping insertions in reference genome
-	perl path/to/itis.pl -g rice_chr1_200k.fa -t mping.fa  -l 500 -N test -1 sample.fq1  -2 sample.fq2 -e Y
+	perl path/to/itis.pl -g rice_chr1_200k.fa -t mping.fa  -l 500 -N test -1 sample.fq1  -2 sample.fq2 -e Y    
 
-
-	-e Y : to tell itis.pl that there are mping homologous sequence in reference genome
+	*-e Y : to tell itis.pl that there are mping homologous sequence in reference genome
 
 ####Output Files
 	itis will produce a lot of files in a directory named test.[aStringOfNumbers]
