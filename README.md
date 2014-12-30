@@ -1,4 +1,4 @@
-#ITIS:(Identify Transposon Insertion Site)<br>
+#ITIS:(Identify Transposon Insertion Sites)<br>
 is a pipeline to identify TE indertion site in genome
 
 It require three input files:<br>  	
