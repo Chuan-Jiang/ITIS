@@ -39,58 +39,52 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 ### <a name="cmd">Comamnd Line Options
 
 --------------------
-
+USAGE：
 #### perl itis.pl	
 
-USAGE:
-    /psc/home/jiangchuan/Code/itis.pl  
-	
-	
-	REQUIRED -g the genome sequence file in fasta format  
-	REQUIRED -t the TE sequence file in fasta format  
-	REQUIRED -l the average length of fragments in library  	
-	REQUIRED -N the name of you project  
-	REQUIRED -1 the paired read file 1  
-	REQUIRED -2 the paired read file 2  	
-		  
-		-f gff file. if provided, ITIS will check if TE inserted in gentic or intergeneic region	 
-		-F <Y|N: default N> run scripts in 'FAST' mode; It will not align all reads to reference genome,caculate the average bg depth 
-		     and estimate if insertion is homo or heter
-			
-			##  parameters used with  '-F N'  :
-			-B use your previous sorted and indexed bam file of all clean reads aligned to reference genome;
-			-R <0.2> the minimum ratio of support fragments and average depth of 200 bp around the insertion site;			
-		-D <2,200> the depth range to filter candidate insertion site. 
+itis.pl
+        REQUIRED -g the genome sequence file in fasta format  
+        REQUIRED -t the TE sequence file in fasta format
+        REQUIRED -l the average length of fragments in library
+        REQUIRED -N the name of you project
+        REQUIRED -1 the paired read file 1
+        REQUIRED -2 the paired read file 2
 
-		-q <1>  the minimum average mapping quality of all supporting reads
+                -f <gff file> if provided, ITIS will check if TE inserted in gentic or intergeneic region
+                -F <Y|N> run scripts in 'FAST' mode; It won't align all reads to reference genome,caculate the average bg depth,
+                     and estimate if insertion is homo or heter,[default N]
 
-		-e <Y|N: default N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required
-		
-		-a <10> the allow number of base can be lost during transposon
+                        ##  parameters used with  '-F N'  :
+                        -B <bam file> use your previous sorted and indexed bam file of reads aligned to reference genome
+                        -D <Num,Num> the depth range to filter raw insertion site, [default 2,200]
 
-		-b in the form /t=3/TS=1/TE=1/ , the minimum requried:
-			t:total reads supporting insertion  /3/
-			CS:clipped reads cover TE start site /0/
-			CE:clipped reads cover TE end site  /0/
-			cs:cross reads cover TE start  /0/
-			ce:cross reads cover TE end    /0/
-			TS:total reads cover TE start  /1/
-			TE:total reads cover TE end    /1/
-		
-		-c FORMAT:\d,\d,\d; for  cpu number for 'BWA mem', 'samtools view'  and 'samtools sort'    defualt 8,2,2
-		
-		-w window size for cluster you support reads: DEFAULT : default: lib_len/2
-		
-		-T use this specifed temperate directory or use the DEFAULT one :[project].[aStringOfNumbers]
-		
-		-m <Y|N: default F> Only print out all commands to STDERR
-	         
-		-h print this help message    
+                -q <Num>  the minimum average mapping quality of all supporting reads, [default 1]
 
-	
-		eg: perl itis.pl -g genome.fa -t tnt1.fa -l 300  -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
+                -e <Y|N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required, [default N]
 
-		BWA samtools should in you PATH
+                -a <Num> the number of bases allowed to be lost when transposing, [defualt 10]
+
+                -b <tags> minimum required number of flanking reads , in the format of /Tag=Value/Tag=Value/Tag=Value/ , the avaliable tags:
+                        t: total supporting reads at detected insertion  /t=3/
+                        CS:clipped reads cover TE start site /CS=0/
+                        CE:clipped reads cover TE end site  /CE=0/
+                        cs:cross reads cover TE start  /cs=0/
+                        ce:cross reads cover TE end    /cs=0/
+                        TS:total reads cover TE start  /TS=1/
+                        TE:total reads cover TE end    /TE=1/
+                                [default /t=3/TS=1/TE=1/]
+                -c <Num,Num,Num> cpu number for 'BWA mem', 'samtools view'  and 'samtools sort', [defualt 8,2,2]
+
+                -w <Num> window size for cluster you support reads, [default library_length/2]
+
+                -T <Directory> use this specifed temperate directory, [default[project].[aStringOfNumbers]]
+
+                -m <Y|N> Only print out all commands to STDERR, [default N]
+                 
+                -h print this help message    
+
+
+                eg: perl  itis.pl -g genome.fa -t tnt1.fa -l 300 -n tnt1 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
 
 
 -------------
