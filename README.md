@@ -43,12 +43,12 @@ USAGE：
 #### perl itis.pl	
 
 itis.pl
-        REQUIRED -g the genome sequence file in fasta format  
-        REQUIRED -t the TE sequence file in fasta format
-        REQUIRED -l the average length of fragments in library
-        REQUIRED -N the name of you project
-        REQUIRED -1 the paired read file 1
-        REQUIRED -2 the paired read file 2
+         REQUIRED -g the genome sequence file in fasta format  
+         REQUIRED -t the TE sequence file in fasta format
+         REQUIRED -l the average length of fragments in library
+         REQUIRED -N the name of you project
+         REQUIRED -1 the paired read file 1
+         REQUIRED -2 the paired read file 2
 
                 -f <gff file> if provided, ITIS will check if TE inserted in gentic or intergeneic region
                 -F <Y|N> run scripts in 'FAST' mode; It won't align all reads to reference genome,caculate the average bg depth,
