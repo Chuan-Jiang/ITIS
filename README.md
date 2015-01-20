@@ -4,7 +4,7 @@ is a pipeline to identify TE indertion site in genome
 It require three input files:<br>  	
 	(i) reference genome sequence,<br> 
 	(ii)TE sequence, <br>
-	(iii)paired-end(PE) short reads generated from sample with TE in it have moved to other region.<br> 
+	(iii)paired-end (PE) short reads, with no restriction on length,generated from the re-sequenced genome that contains novel TE insertions.<br> 
 
 By aligning read pairs to merged reference sequence, reference genome and TE sequence, ITIS will check each informative read pairs as long as it have more than 20bp overlap with TE sequence and determine if it supports the TE insertion around the location mapped by one of read pair.  In theory, by inspecting both cross read pairs and clipped reads at the same time, ITIS will have a higher sensitivity than other tools
 
@@ -28,6 +28,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 	bwa      (v 0.7.7-r441)
 	bedtools (v 2.17.0)
 	Bio::Perl
+	blast+
 	R
 	
 	Other usefull tool:
@@ -56,12 +57,12 @@ USAGE:
 		-F <Y|N: default N> run scripts in 'FAST' mode; It will not align all reads to reference genome,caculate the average bg depth 
 		     and estimate if insertion is homo or heter
 			
-			##  parameters specific to  '-F N'  :
-			-B use your previous sorted and indexed bam file of all clean reads align to reference genome; on condition of '-F N'
-			-R the minimum ratio of support fragments  and depth of 200 bp around the insertion site; default 0.2
-			-D <2,200>, the depth range to filter candidate insertion site. 
+			##  parameters used with  '-F N'  :
+			-B use your previous sorted and indexed bam file of all clean reads aligned to reference genome;
+			-R <0.2> the minimum ratio of support fragments and average depth of 200 bp around the insertion site;			
+		-D <2,200> the depth range to filter candidate insertion site. 
 
-		-q default: 1  the minimum average mapping quality of all supporting reads
+		-q <1>  the minimum average mapping quality of all supporting reads
 
 		-e <Y|N: default N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required
 		

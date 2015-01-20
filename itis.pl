@@ -14,45 +14,43 @@ my $usage = "USAGE:
 	REQUIRED -N the name of you project
 	REQUIRED -1 the paired read file 1
 	REQUIRED -2 the paired read file 2	
-	REQUIRED -f gff file
-			 
-		-F <Y|N: default N> run scripts in 'FAST' mode; It won't align all reads to reference genome,caculate the average bg depth 
-		     and estimate if insertion is homo or heter
+		
+		-f <gff file> if provided, ITIS will check if TE inserted in gentic or intergeneic region
+		-F <Y|N> run scripts in 'FAST' mode; It won't align all reads to reference genome,caculate the average bg depth,
+		     and estimate if insertion is homo or heter,[default N]
 			
-			##  parameters specific to  '-F N'  :
-			-B use your previous sorted and indexed bam file of all clean reads align to reference genome; on condition of '-F N'
-			-R the minimum ratio of support fragments  and depth of 200 bp around the insertion site; default 0.2
-			-D <2,200>, the depth range to filter candidate insertion site. 
+			##  parameters used with  '-F N'  :
+			-B <bam file> use your previous sorted and indexed bam file of reads aligned to reference genome
+			-D <Num,Num> the depth range to filter raw insertion site, [default 2,200]
 
-		-q default: 1  the minimum average mapping quality of all supporting reads
+		-q <Num>  the minimum average mapping quality of all supporting reads, [default 1]
 
-		-e <Y|N: default N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required
+		-e <Y|N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required, [default N]
 		
-		-a <10> the allow number of base can be lost during transposon
+		-a <Num> the number of bases allowed to be lost when transposing, [defualt 10]
 
-		-b in the form /t=3/TS=1/TE=1/ , the minimum requried:
-			t:total reads supporting insertion  /3/
-			CS:clipped reads cover TE start site /0/
-			CE:clipped reads cover TE end site  /0/
-			cs:cross reads cover TE start  /0/
-			ce:cross reads cover TE end    /0/
-			TS:total reads cover TE start  /1/
-			TE:total reads cover TE end    /1/
+		-b <tags> minimum required number of flanking reads , in the format of /Tag=Value/Tag=Value/Tag=Value/ , the avaliable tags:
+			t: total supporting reads at detected insertion  /t=3/
+			CS:clipped reads cover TE start site /CS=0/
+			CE:clipped reads cover TE end site  /CE=0/
+			cs:cross reads cover TE start  /cs=0/
+			ce:cross reads cover TE end    /cs=0/
+			TS:total reads cover TE start  /TS=1/
+			TE:total reads cover TE end    /TE=1/
+				[default /t=3/TS=1/TE=1/]
+		-c <Num,Num,Num> cpu number for 'BWA mem', 'samtools view'  and 'samtools sort', [defualt 8,2,2]
 		
-		-c FORMAT:\\d,\\d,\\d; for  cpu number for 'BWA mem', 'samtools view'  and 'samtools sort'    defualt 8,2,2
+		-w <Num> window size for cluster you support reads, [default library_length/2]
 		
-		-w window size for cluster you support reads: DEFAULT : default: lib_len/2
+		-T <Directory> use this specifed temperate directory, [default[project].[aStringOfNumbers]]
 		
-		-T use this specifed temperate directory or use the DEFAULT one :[project].[aStringOfNumbers]
-		
-		-m <Y|N: default F> Only print out all commands to STDERR
+		-m <Y|N> Only print out all commands to STDERR, [default N]
 	         
-		-h print STDERR this help message    
+		-h print this help message    
 
 	
 		eg: perl  $0 -g genome.fa -t tnt1.fa -l 300 -n tnt1 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
 
-		BWA samtools should in you PATH
 	
 	";
 
@@ -74,7 +72,6 @@ my $rs2_ori  = $opt{2};
 my $gff = $opt{f};
 
 my $min_reads  = $opt{b}?$opt{b}:"/t=3/TS=1/TE=1/";
-my $ratio = $opt{R}?$opt{R}:"0.2";
 my $bam = $opt{B}?$opt{B}:0;
 my $depth_range= $opt{D}?$opt{D}:"2,200";
 my $cpu    = $opt{c}?$opt{c}:"8,2,2";
