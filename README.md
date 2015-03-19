@@ -123,9 +123,18 @@ First of all, untar the sample dataset:
 	The important files included:
 
 		test.mping.filtered.bed  
-			This is a list of confident insertion sites. 
+			This is a list of reliable insertion sites.
+			TAGS in column 4: 
+				SR=(NO. of supporting library fragment),(No. supporting reads),(No. clipped reads at TE start),(No. clipped reads at TE end),(No. cross reads at TE start),(No. cross reads at TE end)
+				MQ=average mapping quality of all supporting reads
+				NM=name of TE
+				GT=(No. of supporting reads),(No. of background reads):(Heter|Homo)
+				PV=the p-value ofbinomial test for zygosity based on the GT values
+				DP=average depth of 100bp region flanking the TE insertion site
+				TS=the joint position at the begin of TE
+				TE=the joint pisition at the end of TE
 		test.mping.raw.bed  
-			This is all insertion sites, some of which may be false 
+			This is all candidate insertion sites, some of which may be false 
 		test.mping.support.reads.sam and test.mping.support.reads.sorted.bam
 			This is alignment file of all supportive reads
 		test.all_reads_aln_ref_and_te.sort.bam
