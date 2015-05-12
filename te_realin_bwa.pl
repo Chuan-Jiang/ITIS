@@ -18,7 +18,7 @@ getopts("n:s:i:p:h",\%opt);
 die "$usage\n" if ($opt{h});
 
 my ($te,$file) = ($opt{n},$opt{s});
-
+my $bwa = "bwa";
 
 open my $fh, $file or die $!;
 my $tmp = "tmp_bwa".time();
@@ -40,7 +40,7 @@ while (<$fh>){  #  open full informative sam file
 
 my $o = $opt{p};
 
-system ("bwa mem  -T 20 $opt{i} $tmp -a >$o.$te.alnte.sam" )== 0 or die $!;
+system ("$bwa mem  -T 20 $opt{i} $tmp -a >$o.$te.alnte.sam" )== 0 or die $!;
 
 
 #system("rm -rf $tmp") == 0 or die $!;

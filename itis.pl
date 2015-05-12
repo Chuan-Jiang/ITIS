@@ -85,6 +85,7 @@ my $cmd;
 my $bindir  = "$FindBin::Bin";
 my $map_q = $opt{q}?$opt{q}:1;
 my $lost = $opt{a}?$opt{a}:10;
+my $bwa = "bwa";
 ##########################################################
   
 
@@ -119,7 +120,7 @@ process_cmd($cmd);				# copy te sequence to tmp/
 ###################### Index you sequence file #######
 
 
-$cmd = "bwa index $tmp_dir/$proj.ref_and_te.fa";
+$cmd = "$bwa index $tmp_dir/$proj.ref_and_te.fa";
 if ( -e "$tmp_dir/$proj.ref_and_te.fa.bwt"){
 	print STDERR "Seems the Indexes for merged sequence exists. Skipped\n";
 }else{
@@ -127,14 +128,14 @@ if ( -e "$tmp_dir/$proj.ref_and_te.fa.bwt"){
 }
 
 
-$cmd = "bwa index $tmp_dir/$te_base";
+$cmd = "$bwa index $tmp_dir/$te_base";
 process_cmd($cmd);				# index te sequence
 
 
 ##### align original reads to reference genome ######
 my $transformtobed_bam ;
 if($fast =~ /N/i and $bam == 0){
-	$cmd = "bwa mem -T 20 -t $cpu_bwa $tmp_dir/$proj.ref_and_te.fa $rs1_ori $rs2_ori | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort - $tmp_dir/$proj.all_reads_aln_ref_and_te.sort";
+	$cmd = "$bwa mem -T 20 -t $cpu_bwa $tmp_dir/$proj.ref_and_te.fa $rs1_ori $rs2_ori | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort - $tmp_dir/$proj.all_reads_aln_ref_and_te.sort";
 	process_cmd($cmd);
 	$transformtobed_bam = "-b $tmp_dir/$proj.all_reads_aln_ref_and_te.sort.bam";
 	
@@ -158,7 +159,7 @@ my $rds = "$tmp_dir/rds_te.fq1 $tmp_dir/rds_te.fq2";
 
 #######  align reads associate with TE to the merged reference sequence  #######
 
-$cmd = "bwa mem -T 20 -v 1 -t $cpu_bwa $tmp_dir/$proj.ref_and_te.fa $rds  |tee  $tmp_dir/$proj.ref_and_te.sam | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort  - $tmp_dir/$proj.ref_and_te.sorted";
+$cmd = "$bwa mem -T 20 -v 1 -t $cpu_bwa $tmp_dir/$proj.ref_and_te.fa $rds  |tee  $tmp_dir/$proj.ref_and_te.sam | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort  - $tmp_dir/$proj.ref_and_te.sorted";
 
 
 if (-e "$tmp_dir/$proj.ref_and_te.sam"){

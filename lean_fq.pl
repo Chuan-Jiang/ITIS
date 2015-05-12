@@ -17,11 +17,11 @@ my %opt;
 getopts("1:2:p:i:c:h",\%opt);
 
 my($r1,$r2,$pre,$index,$cpu) = ($opt{1},$opt{2},$opt{p},$opt{i},$opt{c});
-
+my $bwa = "bwa";
 open R1,">$pre.fq1" or die $!;
 open R2, ">$pre.fq2" or die $!;
 
-open ALN, "bwa mem  -T 20 -t $cpu $index $r1 $r2 | " or die $!;
+open ALN, "$bwa mem  -T 20 -t $cpu $index $r1 $r2 | " or die $!;
 my %reads;
 my $last ;
 
