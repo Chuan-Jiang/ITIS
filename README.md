@@ -142,8 +142,9 @@ First of all, untar the sample dataset:
 		commands_rcd
 			A record of all the command used by itis.pl to identify TE insertions.  
 		test.ref_and_te.fa    
-			the reference sequence, containing genome and mping sequence,  used by bwa to align reads.    
-		
+			the reference sequence, containing genome and mping sequence,  used by bwa to align reads.   
+	    
+    *bam, *bed and reference sequence can be visuallized in IGV
 	If you want to filter the raw insertion list by personalized criteria, you can rerun the script filter_insertion.pl, just as shown in command_rcd
 
 
