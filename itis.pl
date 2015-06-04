@@ -25,7 +25,7 @@ my $usage = "USAGE:
 
 		-q <Num>  the minimum average mapping quality of all supporting reads, [default 1]
 
-		-e <Y|N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required, [default N]
+		-e <Y|N> If reference genome contains this TE or it's homolog. using blast to hard mask these sequence is required, [default N]
 		
 		-a <Num> the number of bases allowed to be lost when transposing, [defualt 10]
 
@@ -40,7 +40,7 @@ my $usage = "USAGE:
 				[default /t=3/TS=1/TE=1/]
 		-c <Num,Num,Num> cpu number for 'BWA mem', 'samtools view'  and 'samtools sort', [defualt 8,2,2]
 		
-		-w <Num> window size for cluster you support reads, [default library_length/2]
+		-w <Num> window size used to cluster supportting reads, [default library_length/2]
 		
 		-T <Directory> use this specifed temperate directory, [default[project].[aStringOfNumbers]]
 		
