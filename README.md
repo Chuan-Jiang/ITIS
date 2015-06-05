@@ -87,7 +87,7 @@ itis.pl
                 -h print this help message    
 
 
-                eg: perl  itis.pl -g genome.fa -t tnt1.fa -l 300 -n tnt1 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
+                eg: perl  itis.pl -g genome.fa -t tnt1.fa -l 300 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
 
 
 -------------

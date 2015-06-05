@@ -49,7 +49,7 @@ my $usage = "USAGE:
 		-h print this help message    
 
 	
-		eg: perl  $0 -g genome.fa -t tnt1.fa -l 300 -n tnt1 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
+		eg: perl  $0 -g genome.fa -t tnt1.fa -l 300 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
 
 	
 	";
