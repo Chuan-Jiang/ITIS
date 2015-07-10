@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl 
 use warnings; use strict;
 use FindBin;
 use Getopt::Std;
@@ -100,6 +100,7 @@ if(-e $tmp_dir){
 open CMD, ">$tmp_dir/commands_rcd" or die $!;
 ####################### prepare template #########
 
+
 my $para_filter;
 if($exists =~ /N/i){
 	$para_filter = "";
@@ -187,7 +188,7 @@ foreach my $te (@tes){
 
 	########## extract informative reads from sam file  ###############
 
-	$cmd = "perl -I $bindir $bindir/extract_informative.pl -s $tmp_dir/$proj.ref_and_te.sam  -n $te -p $tmp_dir/$proj  "; 
+	$cmd = "perl -I $bindir $bindir/extract_informative.pl -g $genome -s $tmp_dir/$proj.ref_and_te.sam  -n $te -p $tmp_dir/$proj  "; 
 	process_cmd($cmd);
 	$cmd = "perl -I $bindir $bindir/modify_informative.pl $tmp_dir/$proj.$te.informative.sam > $tmp_dir/$proj.$te.informative.full.sam";
 	process_cmd($cmd);

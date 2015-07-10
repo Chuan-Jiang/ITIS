@@ -21,7 +21,7 @@ my $bwa = "bwa";
 open R1,">$pre.fq1" or die $!;
 open R2, ">$pre.fq2" or die $!;
 
-open ALN, "$bwa mem  -T 20 -t $cpu $index $r1 $r2 | " or die $!;
+open ALN, "$bwa mem  -MT 20 -t $cpu $index $r1 $r2 | samtools view -XS - |" or die $!;
 my %reads;
 my $last ;
 
@@ -31,27 +31,38 @@ while (<ALN>){
 
 	my($id,$flag,$seq,$q) = (split /\t/)[0,1,9,10];
 	
-	if($last and $id ne $last  and %reads ){
-		print  R1 $reads{1};
-		print  R2 $reads{2};
-		undef(%reads);
+	if($last and $id ne $last){
+		prt($last);
 	}
-	$last = $id;
+	if(eof(ALN)){
+		prt($id);
+	}
+	
 
-	$flag = unpack("B32",pack("N",$flag));
-	my @ar = (split //,reverse($flag))[0..11];
-	next if ($ar[2] and $ar[3]);
-	next if ($ar[11] or $ar[8]);
-	my $r = $ar[6]?1:2;
-	die "lean fq error\n" if ($r == 2 and $ar[7] == 0);
-	if($ar[4] == 1){
+	next if ($flag =~ /uU/);
+	next if ($flag =~ /s/);
+	my $r = $flag =~ /1/? 1:2;
+
+	if($flag =~ /r/){
 		$seq = reverse($seq);
-		$seq =~ tr/ATCG/TAGC/;
+		$seq =~ tr/atcgATCG/tagcTAGC/;
 	}
-	$reads{$r} ="\@$id\n$seq\n+\n$q\n";
+	$reads{$id}{$r} =">$id\n$seq\n";
+	$last = $id;
 }
 	
-	
-	
+sub prt{
+	my $id = shift @_;
+	my $r1 = $reads{$id}{1};
+	my $r2 = $reads{$id}{2};
+	if($r1 and $r2){
+		print R1 $r1;
+		print R2 $r2;
+	}
+	undef $reads{$id};
+}
+
+
+
 
 
