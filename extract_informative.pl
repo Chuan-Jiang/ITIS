@@ -37,6 +37,8 @@ my @rs;			# array contain the pairs of one fragment
 
 open SAM, $sam or die $!;
 
+
+my $num_infor =0;
 while (<SAM>){     #  reading sam file one by one 
 	chomp;
 	if (/^@/){     #   save header 
@@ -62,6 +64,11 @@ while (<SAM>){     #  reading sam file one by one
 		print_clu(@rs) if (eof(SAM));
 	}
 }
+
+if($num_infor == 0){
+	die "NO insertions can be found. Exit!\n";
+}
+
 sub print_clu{
 	my @va = @_;
 	my $pt = join "\n",@va;     # $pt is ready to print
@@ -80,6 +87,9 @@ sub print_clu{
 			$tboo = 1;
 		}
 	}			
-	print $fh "$pt\n" if ($gboo and $tboo);
+	if ($gboo and $tboo){
+		print $fh "$pt\n" ;
+		$num_inf ++;
+	}
 }
 
