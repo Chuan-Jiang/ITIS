@@ -89,7 +89,7 @@ sub print_clu{
 	}			
 	if ($gboo and $tboo){
 		print $fh "$pt\n" ;
-		$num_inf ++;
+		$num_infor ++;
 	}
 }
 
