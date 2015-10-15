@@ -47,7 +47,7 @@ if($gff_file){    #  if provided gff file, then process the following code util 
 ################# generate usefull gff file containg intergenic region  ##########
 
 open OUT, ">$folder/$proj.$te.annotation.tsv" or die $!;
-open TEM,">tem.$proj" or die $!;
+open TEM,">$proj.tem" or die $!;
 open GFF,"awk 'BEGIN{IGNORECASE=1} {if(\$3 ~ /gene/){print \$0}}' $gff_file |" or die $!;
 chomp (my @gff = <GFF>);
 for (my $i = 1;$i<@gff;$i++){
@@ -89,7 +89,7 @@ my %genome = Seq::seq_hash($genome_file);
 
 ################### intersect using bedtools  ###########################
 
-open BEDTOOL, "bedtools intersect -a $bed_file -b tem.$proj -wa -wb |" or die $!;
+open BEDTOOL, "bedtools intersect -a $bed_file -b $proj.tem -wa -wb |" or die $!;
 
 my $la=0;
 my $la_t;
@@ -114,6 +114,6 @@ while (<BEDTOOL>){
 
 }
 
-#unlink "tem.$proj";
+unlink "$proj.tem";
 
 }

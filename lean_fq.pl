@@ -21,7 +21,7 @@ my $bwa = "bwa";
 open R1,">$pre.fq1" or die $!;
 open R2, ">$pre.fq2" or die $!;
 
-open ALN, "$bwa mem  -MT 20 -t $cpu $index $r1 $r2 | samtools view -XS - |" or die $!;
+open ALN, "$bwa mem  -MT 20 -t $cpu $index $r1 $r2 2>/dev/null | samtools view -XS - |" or die $!;
 my %reads;
 my $last ;
 

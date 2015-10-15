@@ -9,7 +9,9 @@ use Time::localtime;
 my $usage = "USAGE:
 	$0
 	REQUIRED -g the genome sequence file in fasta format  
+		OR -G prefix of bwa-indexed reference file ( genome + transposon) 
 	REQUIRED -t the TE sequence file in fasta format
+		or -T prefix of bwa-indexed transposon sequence file
 	REQUIRED -l the average length of fragments in library	
 	REQUIRED -N the name of you project
 	REQUIRED -1 the paired read file 1
@@ -42,7 +44,7 @@ my $usage = "USAGE:
 		
 		-w <Num> window size used to cluster supportting reads, [default library_length/2]
 		
-		-T <Directory> use this specifed temperate directory, [default[project].[aStringOfNumbers]]
+		-D <Directory> use this specifed temperate directory, [default[project].[aStringOfNumbers]]
 		
 		-m <Y|N> Only print out all commands to STDERR, [default N]
 	         
@@ -56,7 +58,7 @@ my $usage = "USAGE:
 
 die "$usage\n" if (@ARGV == 0);
 my %opt;
-getopts("g:t:l:N:1:2:f:b:R:B:D:c:q:e:a:F:T:w:m:h",\%opt);
+getopts("g:t:l:N:1:2:f:b:R:B:D:G:T:c:q:e:a:F:D:w:m:h",\%opt);
 
 die "$usage\n" if ($opt{h});
 
@@ -64,7 +66,10 @@ die "$usage\n" if ($opt{h});
 
 my $genome = $opt{g};
 my $te_seq = $opt{t};
-	my $te_base = basename $te_seq;
+
+my $index_te = $opt{T};
+my $index_ref = $opt{G};
+
 my $lib_len = $opt{l};
 my $proj   = $opt{N};
 my $rs1_ori  = $opt{1};
@@ -78,7 +83,7 @@ my $cpu    = $opt{c}?$opt{c}:"8,2,2";
 	my($cpu_bwa,$cpu_view,$cpu_sort) = split /,/,$cpu;
 my $exists = $opt{e}?$opt{e}:"N";
 my $fast   = $opt{F}?$opt{F}:"N";
-my $tmp_dir = $opt{T}? $opt{T} : "$proj.".time();
+my $tmp_dir = $opt{D}? $opt{D} : "$proj.".time();
 my $window = $opt{w}?$opt{w}:$lib_len/2;
 my $only_cmd = $opt{m}?$opt{m}:"N";
 my $cmd;
@@ -98,45 +103,51 @@ if(-e $tmp_dir){
 }
 
 open CMD, ">$tmp_dir/commands_rcd" or die $!;
-####################### prepare template #########
 
+my $para_filter = "";
 
-my $para_filter;
-if($exists =~ /N/i){
-	$para_filter = "";
-	$cmd = "cat $genome $te_seq >$tmp_dir/$proj.ref_and_te.fa";
+if($index_ref){
+	$genome = $index_ref;
 }else{
-	$cmd = "perl -I $bindir $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -p $tmp_dir/te_homo_in_ref.lst -o $tmp_dir/$proj.ref_and_te.fa";
-	$para_filter = "-l $tmp_dir/te_homo_in_ref.lst";
+	####################### prepare reference  #########
+
+	if($exists =~ /N/i){
+		$cmd = "cat $genome $te_seq >$tmp_dir/$proj.ref_and_te.fa";
+	}else{
+		$cmd = "perl -I $bindir $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -p $tmp_dir/te_homo_in_ref.lst -o $tmp_dir/$proj.ref_and_te.fa";
+		$para_filter = "-l $tmp_dir/te_homo_in_ref.lst";
+	}
+
+	process_cmd($cmd);				# cat sequence together
+	
+	
+	###################### Index sequence file #######
+
+	$cmd = "$bwa index $tmp_dir/$proj.ref_and_te.fa";
+	if ( -e "$tmp_dir/$proj.ref_and_te.fa.bwt"){
+		print STDERR "Seems like the Indexes for merged sequence exists. Skipped\n";
+	}else{
+		process_cmd($cmd);				# index merged sequence
+	}
+
+	$index_ref = "$tmp_dir/$proj.ref_and_te.fa";
 }
-
-
-process_cmd($cmd);				# cat sequence together
-
-
-$cmd = "cp $te_seq $tmp_dir/";
-process_cmd($cmd);				# copy te sequence to tmp/
-
-
-###################### Index you sequence file #######
-
-
-$cmd = "$bwa index $tmp_dir/$proj.ref_and_te.fa";
-if ( -e "$tmp_dir/$proj.ref_and_te.fa.bwt"){
-	print STDERR "Seems the Indexes for merged sequence exists. Skipped\n";
+if($index_te){
+	1;
 }else{
-	process_cmd($cmd);				# index merged sequence
+	$cmd = "cp $te_seq $tmp_dir/";
+	my $te_base = basename $te_seq;
+	process_cmd($cmd);              # copy te sequence to tmp/
+	$cmd = "$bwa index $tmp_dir/$te_base";
+	process_cmd($cmd);              # index te sequence
+	$index_te = "$tmp_dir/$te_base";
 }
-
-
-$cmd = "$bwa index $tmp_dir/$te_base";
-process_cmd($cmd);				# index te sequence
 
 
 ##### align original reads to reference genome ######
 my $transformtobed_bam ;
 if($fast =~ /N/i and $bam == 0){
-	$cmd = "$bwa mem -T 20 -t $cpu_bwa $tmp_dir/$proj.ref_and_te.fa $rs1_ori $rs2_ori | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort - $tmp_dir/$proj.all_reads_aln_ref_and_te.sort";
+	$cmd = "$bwa mem -T 20 -t $cpu_bwa $index_ref $rs1_ori $rs2_ori 2>/dev/null | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort - $tmp_dir/$proj.all_reads_aln_ref_and_te.sort";
 	process_cmd($cmd);
 	$transformtobed_bam = "-b $tmp_dir/$proj.all_reads_aln_ref_and_te.sort.bam";
 	
@@ -153,14 +164,14 @@ if($fast =~ /N/i and $bam == 0){
 
 ##### firstly extracting reads aligned at TE#####
 
-$cmd = "perl -I $bindir $bindir/lean_fq.pl -1 $rs1_ori -2 $rs2_ori -p $tmp_dir/rds_te -i $tmp_dir/$te_base -c $cpu_bwa "; 
+$cmd = "perl -I $bindir $bindir/lean_fq.pl -1 $rs1_ori -2 $rs2_ori -p $tmp_dir/rds_te -i $index_te -c $cpu_bwa "; 
 process_cmd($cmd);
 my $rds = "$tmp_dir/rds_te.fq1 $tmp_dir/rds_te.fq2";
 
 
 #######  align reads associate with TE to the merged reference sequence  #######
 
-$cmd = "$bwa mem -T 20 -v 1 -t $cpu_bwa $tmp_dir/$proj.ref_and_te.fa $rds  |tee  $tmp_dir/$proj.ref_and_te.sam | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort  - $tmp_dir/$proj.ref_and_te.sorted";
+$cmd = "$bwa mem -T 20 -v 1 -t $cpu_bwa $index_ref $rds 2>/dev/null  |tee  $tmp_dir/$proj.ref_and_te.sam | samtools view -@ $cpu_view -buS - | samtools sort -@ $cpu_sort  - $tmp_dir/$proj.ref_and_te.sorted";
 
 
 if (-e "$tmp_dir/$proj.ref_and_te.sam"){
@@ -174,7 +185,7 @@ process_cmd($cmd);
 
 ###### check  te seq id in te seq file####
 
-open TE,$te_seq or die $!;
+open TE,$index_te or die $!;
 
 my @tes;
 while(<TE>){
@@ -199,12 +210,12 @@ foreach my $te (@tes){
 
 
 	#######   raln the informative reads back to the TE sequence  ###########
-	$cmd = "perl -I $bindir $bindir/te_realin_bwa.pl -n $te -s $tmp_dir/$proj.$te.informative.full.sam -i $tmp_dir/$te_base -p $tmp_dir/$proj";
+	$cmd = "perl -I $bindir $bindir/te_realin_bwa.pl -n $te -s $tmp_dir/$proj.$te.informative.full.sam -i $index_te -p $tmp_dir/$proj";
 	process_cmd($cmd);
 
 
 	######  identify the reads support insertion  #####
-	$cmd = "perl -I $bindir $bindir/identity_inser_sites.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $tmp_dir/$proj.ref_and_te.fa -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
+	$cmd = "perl -I $bindir $bindir/identity_inser_sites.pl -s $tmp_dir/$proj.$te.informative.full.sam -g $index_ref -l $lib_len -n $te -r $tmp_dir/$proj.$te.alnte.sam -p $tmp_dir/$proj -a $lost";
 	process_cmd($cmd);
 
 	$cmd = "samtools view -buS $tmp_dir/${proj}.$te.support.reads.sam | samtools sort - $tmp_dir/${proj}.$te.support.reads.sorted ";
@@ -216,7 +227,7 @@ foreach my $te (@tes){
 	###### sort the support reads and generate bed files  ######
 	$cmd = "sort -k 3,3 -k 4,4n $tmp_dir/${proj}.$te.ins.loc.lst >$tmp_dir/${proj}.$te.ins.loc.sorted.lst";
 	process_cmd($cmd);
-	$cmd = "perl -I $bindir  $bindir/transform_to_bed.pl $transformtobed_bam -e $te_seq -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
+	$cmd = "perl -I $bindir  $bindir/transform_to_bed.pl $transformtobed_bam -e $index_te -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
 	process_cmd($cmd);
 
 	$cmd = "perl -I $bindir $bindir/filter_insertion.pl $para_filter -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q  -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";
@@ -224,7 +235,7 @@ foreach my $te (@tes){
 
 	#####  Intergrate gene information in GFF and generate IGV snpshot batch file  ####
 	if($gff){
-		$cmd = "perl -I $bindir $bindir/annotate_bed.pl -b $tmp_dir/$proj.$te.filtered.bed  -a $gff -g $tmp_dir/$proj.ref_and_te.fa  -n $te -p $proj  -d $tmp_dir "; 
+		$cmd = "perl -I $bindir $bindir/annotate_bed.pl -b $tmp_dir/$proj.$te.filtered.bed  -a $gff -g $index_ref  -n $te -p $proj  -d $tmp_dir "; 
 		process_cmd($cmd);
 	}
 }

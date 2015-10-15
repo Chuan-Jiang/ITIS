@@ -146,6 +146,7 @@ if(@tsds){
 	print STDERR "Estimate the length of TSD is $tsd_l bp\n";
 	$tsd_l--;
 }else{
+	$tsd_l = 1;
 	print STDERR "Can't determine the length TSD, because there are no clipped aligned reads\n";
 }
 

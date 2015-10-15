@@ -40,7 +40,7 @@ while (<$fh>){  #  open full informative sam file
 
 my $o = $opt{p};
 
-system ("$bwa mem  -T 20 $opt{i} $tmp -a >$o.$te.alnte.sam" )== 0 or die $!;
+system ("$bwa mem  -T 20 $opt{i} $tmp -a 2>/dev/null >$o.$te.alnte.sam" )== 0 or die $!;
 
 system("rm -rf $tmp") == 0 or die $!;
 
