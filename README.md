@@ -39,31 +39,29 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 ### <a name="cmd">Comamnd Line Options
 
 --------------------
-USAGE：
+USAGE:
 #### perl itis.pl	
-
-itis.pl 
-
-
-          REQUIRED -g the genome sequence file in fasta format    
-          REQUIRED -t the TE sequence file in fasta format    
-          REQUIRED -l the average length of fragments in library    
-          REQUIRED -N the name of you project   
-          REQUIRED -1 the paired read file 1   
-          REQUIRED -2 the paired read file 2   
-
+        /psc/home/jiangchuan/Dropbox/Code/Code_TE_inser/itis.pl
+        REQUIRED -g the genome sequence file in fasta format  
+                OR -G prefix of bwa-indexed reference file ( genome + transposon) 
+        REQUIRED -t the TE sequence file in fasta format
+                or -T prefix of bwa-indexed transposon sequence file
+        REQUIRED -l the average length of fragments in library
+        REQUIRED -N the name of project
+        REQUIRED -1 the paired read file 1
+        REQUIRED -2 the paired read file 2
 
                 -f <gff file> if provided, ITIS will check if TE inserted in gentic or intergeneic region
                 -F <Y|N> run scripts in 'FAST' mode; It won't align all reads to reference genome,caculate the average bg depth,
                      and estimate if insertion is homo or heter,[default N]
 
                         ##  parameters used with  '-F N'  :
-                        -B <bam file> use your previous sorted and indexed bam file of reads aligned to reference genome
+                        -B <bam file> use previous sorted and indexed bam file of reads aligned to reference genome
                         -D <Num,Num> the depth range to filter raw insertion site, [default 2,200]
 
                 -q <Num>  the minimum average mapping quality of all supporting reads, [default 1]
 
-                -e <Y|N> if TE sequence have homolog in genome. using blast to hard mask repeat sequence is required, [default N]
+                -e <Y|N> If reference genome contains this TE or it's homolog. using blast to hard mask these sequence is required, [default N]
 
                 -a <Num> the number of bases allowed to be lost when transposing, [defualt 10]
 
@@ -78,17 +76,17 @@ itis.pl
                                 [default /t=3/TS=1/TE=1/]
                 -c <Num,Num,Num> cpu number for 'BWA mem', 'samtools view'  and 'samtools sort', [defualt 8,2,2]
 
-                -w <Num> window size for cluster you support reads, [default library_length/2]
+                -w <Num> window size used to cluster supportting reads, [default library_length/2]
 
-                -T <Directory> use this specifed temperate directory, [default[project].[aStringOfNumbers]]
+                -D <Directory> use this specifed temperate directory, [default[project].[aStringOfNumbers]]
 
                 -m <Y|N> Only print out all commands to STDERR, [default N]
                  
                 -h print this help message    
 
 
-                eg: perl  itis.pl -g genome.fa -t tnt1.fa -l 300 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
-
+                eg: perl  /psc/home/jiangchuan/Dropbox/Code/Code_TE_inser/itis.pl -g genome.fa -t tnt1.fa -l 300 -N test_run -1 reads.fq1 -2 reads.fq2 
+-f medicago.gff3 
 
 -------------
 

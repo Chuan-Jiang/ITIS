@@ -13,7 +13,7 @@ my $usage = "USAGE:
 	REQUIRED -t the TE sequence file in fasta format
 		or -T prefix of bwa-indexed transposon sequence file
 	REQUIRED -l the average length of fragments in library	
-	REQUIRED -N the name of you project
+	REQUIRED -N the name of project
 	REQUIRED -1 the paired read file 1
 	REQUIRED -2 the paired read file 2	
 		
@@ -22,7 +22,7 @@ my $usage = "USAGE:
 		     and estimate if insertion is homo or heter,[default N]
 			
 			##  parameters used with  '-F N'  :
-			-B <bam file> use your previous sorted and indexed bam file of reads aligned to reference genome
+			-B <bam file> use previous sorted and indexed bam file of reads aligned to reference genome
 			-D <Num,Num> the depth range to filter raw insertion site, [default 2,200]
 
 		-q <Num>  the minimum average mapping quality of all supporting reads, [default 1]
