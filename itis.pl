@@ -74,7 +74,7 @@ my $lib_len = $opt{l};
 my $proj   = $opt{N};
 my $rs1_ori  = $opt{1};
 my $rs2_ori  = $opt{2};
-my $gff = $opt{f};
+my $gff = $opt{f}? "-a $opt{f}" : " " ;
 
 my $min_reads  = $opt{b}?$opt{b}:"/t=3/TS=1/TE=1/";
 my $bam = $opt{B}?$opt{B}:0;
@@ -104,18 +104,15 @@ if(-e $tmp_dir){
 
 open CMD, ">$tmp_dir/commands_rcd" or die $!;
 
-my $para_filter = "";
 
 if($index_ref){
 	$genome = $index_ref;
 }else{
 	####################### prepare reference  #########
-
 	if($exists =~ /N/i){
 		$cmd = "cat $genome $te_seq >$tmp_dir/$proj.ref_and_te.fa";
 	}else{
-		$cmd = "perl -I $bindir $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq -p $tmp_dir/te_homo_in_ref.lst -o $tmp_dir/$proj.ref_and_te.fa";
-		$para_filter = "-l $tmp_dir/te_homo_in_ref.lst";
+		$cmd = "perl -I $bindir $bindir/mask_te_homo_in_genome.pl -g $genome -t $te_seq  -o $tmp_dir/$proj.ref_and_te.fa";
 	}
 
 	process_cmd($cmd);				# cat sequence together
@@ -230,14 +227,13 @@ foreach my $te (@tes){
 	$cmd = "perl -I $bindir  $bindir/transform_to_bed.pl $transformtobed_bam -e $index_te -n $te -p $tmp_dir/$proj.$te  -i $tmp_dir/$proj.$te.ins.loc.sorted.lst -l $lib_len  -w $window ";
 	process_cmd($cmd);
 
-	$cmd = "perl -I $bindir $bindir/filter_insertion.pl $para_filter -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q  -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";
+	my $par = ($exists =~ /N/i)?" ":"-l $index_ref.list";
+	$cmd = "perl -I $bindir $bindir/filter_insertion.pl  $par -i $tmp_dir/$proj.$te.raw.bed -n $min_reads -q $map_q  -d $depth_range >$tmp_dir/$proj.$te.filtered.bed";
 	process_cmd($cmd);
 
 	#####  Intergrate gene information in GFF and generate IGV snpshot batch file  ####
-	if($gff){
-		$cmd = "perl -I $bindir $bindir/annotate_bed.pl -b $tmp_dir/$proj.$te.filtered.bed  -a $gff -g $index_ref  -n $te -p $proj  -d $tmp_dir "; 
-		process_cmd($cmd);
-	}
+	$cmd = "perl -I $bindir $bindir/annotate_bed.pl -b $tmp_dir/$proj.$te.filtered.bed $gff -g $index_ref  -n $te -p $proj  -d $tmp_dir "; 
+	process_cmd($cmd);
 }
 
 ######

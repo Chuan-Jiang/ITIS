@@ -5,13 +5,12 @@ use Bio::SeqIO;
 use Getopt::Std;
 
 my %opt;
-getopts("g:t:o:p:h",\%opt) ;
+getopts("g:t:o:h",\%opt) ;
 
 die "USAGE $0 
 	-g genome seq file
 	-t te seq file
-	-o output fasta file name, merged ref genome and te	
-	-p file name of pos list of TE
+	-o name of output file with combined sequence (*.fa)
 	-h help
 
 	" if ( $opt{h});
@@ -30,7 +29,7 @@ while (my $seq_obj = $seq_in -> next_seq){
 my %te = Seq::seq_hash($opt{t});
 
 # using blast2seq to identify the te homolog
-open LIS, ">$opt{p}" or die $!;
+open LIS, ">$opt{o}.list" or die $!;
 open BLA, "blastn -query $opt{t} -subject $opt{g} -outfmt 6 |" or die $!;
 while(<BLA>){
 	chomp;
