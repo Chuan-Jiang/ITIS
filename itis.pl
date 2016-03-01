@@ -182,7 +182,7 @@ process_cmd($cmd);
 
 ###### check  te seq id in te seq file####
 
-open TE,$index_te or die $!;
+open TE,$te_seq or die $!;
 
 my @tes;
 while(<TE>){
