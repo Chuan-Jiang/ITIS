@@ -198,6 +198,11 @@ foreach my $te (@tes){
 
 	$cmd = "perl -I $bindir $bindir/extract_informative.pl -g $genome -s $tmp_dir/$proj.ref_and_te.sam  -n $te -p $tmp_dir/$proj  "; 
 	process_cmd($cmd);
+	if ( -e "$tmp_dir/$proj.$te.empty"){
+		print STDERR "$te no insertions\n";
+		last;
+	}
+	
 	$cmd = "perl -I $bindir $bindir/modify_informative.pl $tmp_dir/$proj.$te.informative.sam > $tmp_dir/$proj.$te.informative.full.sam";
 	process_cmd($cmd);
 	$cmd = "samtools view -buS $tmp_dir/$proj.$te.informative.sam | samtools sort - $tmp_dir/$proj.$te.informative.sorted";
@@ -264,10 +269,6 @@ sub process_cmd {
 		return;
 	}
 }
-
-
-
-
 
 sub mytime() {
   my @mabbr = qw(January February March April May June July August September October November December);

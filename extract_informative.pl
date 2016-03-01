@@ -66,7 +66,8 @@ while (<SAM>){     #  reading sam file one by one
 }
 
 if($num_infor == 0){
-	die "NO insertions can be found. Exit!\n";
+	system ("touch $pre.$id.empty") == 0 or die $!; 
+	#die "NO insertions can be found. Exit!\n";
 }
 
 sub print_clu{
