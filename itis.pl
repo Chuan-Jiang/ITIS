@@ -17,7 +17,7 @@ my $usage = "USAGE:
 	REQUIRED -1 the paired read file 1
 	REQUIRED -2 the paired read file 2	
 		
-		-f <gff file> if provided, ITIS will check if TE inserted in gentic or intergeneic region
+		-f <gff file> if provided, ITIS will check if TE inserted in gentic or intergeneic region  <deprecated>
 		-F <Y|N> run scripts in 'FAST' mode; It won't align all reads to reference genome,caculate the average bg depth,
 		     and estimate if insertion is homo or heter,[default N]
 			
