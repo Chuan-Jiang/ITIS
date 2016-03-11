@@ -15,17 +15,18 @@ my $help = "$0
 			TE:total reads cover TE end    /1/
 	-q : degault <1>, the minimum required average mapping quality
 	-d : default <2,200>, the reads depth range
+	-b : the treshhold of NB tag  default : 100;
 	-h : help message
 	";
 
 die $help unless ( @ARGV);
 
 my %opt;
-getopts("i:l:c:n:q:d:r:h",\%opt);
+getopts("i:l:b:c:n:q:d:r:h",\%opt);
 die $help  if($opt{h});
 
 ######## parameters ###########
-
+myb $nb = $opt{b}?$opt{b}:100;
 my $ins_file = $opt{i};
 my $lst = $opt{l};
 
@@ -45,8 +46,8 @@ if($lst){
 	while(<LST>){
 		chomp;
 		my($chr,$s,$e,$te) = split /\t/;
-		$s = $s - 100;
-		$e = $e + 100;
+		$s = $s - $nb;
+		$e = $e + $nb;
 		foreach my $i ($s..$e){
 			$homos{$te}{$chr}{$i} = 1;
 		}

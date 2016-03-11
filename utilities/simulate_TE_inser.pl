@@ -37,9 +37,9 @@ while(my $inseq = $seq_in -> next_seq){
 	my $seq_p;
 	foreach my $s ( sort {$a<=>$b} @ins_site){
 		my $sr = (rand(1)<0.5)?"-1":"1";
-		print "$id\t".$s."\t".($s+5)."\t$sr\n";
 		
-		my $te = $te_ha{tnt1};
+		my ($te,$teid) = ran_te(\%te_ha);
+		print "$id\t".$s."\t".($s+5)."\t$sr:$teid\n";
 		if($sr eq "-1"){
 			$te = reverse($te);
 			$te =~ tr/ATCG/TAGC/;
@@ -58,5 +58,11 @@ while(my $inseq = $seq_in -> next_seq){
 
 }
 
-
-
+sub ran_te {
+	my $ref = shift @_;
+	my @keys = keys (%{$ref});
+	my $n = scalar @keys;
+	my $r = int(rand($n));
+	my $rseq = $$ref{$keys[$r]};
+	return($rseq,$keys[$r]);
+}
