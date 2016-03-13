@@ -24,7 +24,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 
    The following programs need to be installed and the executable should be in your path:
 	
-	samtools (v 0.1.19)
+	samtools (v 0.1.19)   #####******IMPORTANT******######
 	bwa      (v 0.7.7-r441)
 	bedtools (v 2.17.0)
 	Bio::Perl
