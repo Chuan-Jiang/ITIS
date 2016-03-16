@@ -9,7 +9,7 @@ use Time::localtime;
 my $usage = "USAGE:
 	$0
 	REQUIRED -g the genome sequence file in fasta format  
-		OR -G prefix of bwa-indexed reference file ( genome + transposon) 
+		OR -G prefix of bwa-indexed reference file ( genome + transposon)	
 	REQUIRED -t the TE sequence file in fasta format
 		or -T prefix of bwa-indexed transposon sequence file
 	REQUIRED -l the average length of fragments in library	
@@ -23,7 +23,7 @@ my $usage = "USAGE:
 			
 			##  parameters used with  '-F N'  :
 			-B <bam file> use previous sorted and indexed bam file of reads aligned to reference genome
-			-D <Num,Num> the depth range to filter raw insertion site, [default 2,200]
+			-d <Num,Num> the depth range to filter raw insertion site, [default 2,200]
 
 		-q <Num>  the minimum average mapping quality of all supporting reads, [default 1]
 
@@ -58,7 +58,7 @@ my $usage = "USAGE:
 
 die "$usage\n" if (@ARGV == 0);
 my %opt;
-getopts("g:t:l:N:1:2:f:b:R:B:D:G:T:c:q:e:a:F:D:w:m:h",\%opt);
+getopts("g:t:l:N:1:2:f:b:R:B:d:G:T:c:q:e:a:F:D:w:m:h",\%opt);
 
 die "$usage\n" if ($opt{h});
 
@@ -78,7 +78,7 @@ my $gff = $opt{f}? "-a $opt{f}" : " " ;
 
 my $min_reads  = $opt{b}?$opt{b}:"/t=3/TS=1/TE=1/";
 my $bam = $opt{B}?$opt{B}:0;
-my $depth_range= $opt{D}?$opt{D}:"2,200";
+my $depth_range= $opt{d}?$opt{d}:"2,200";
 my $cpu    = $opt{c}?$opt{c}:"8,2,2";
 	my($cpu_bwa,$cpu_view,$cpu_sort) = split /,/,$cpu;
 my $exists = $opt{e}?$opt{e}:"N";

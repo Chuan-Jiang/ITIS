@@ -22,7 +22,7 @@ By aligning read pairs to merged reference sequence, reference genome and TE seq
 ---
 ### <a name="dep">Dependencies:
 
-   The following programs need to be installed and the executable should be in your path:
+   The following programs need to be installed and the executable commands should be in $PATH of system:
 	
 	samtools (v 0.1.19)   #####******IMPORTANT******######
 	bwa      (v 0.7.7-r441)
@@ -57,7 +57,7 @@ USAGE:
 
                         ##  parameters used with  '-F N'  :
                         -B <bam file> use previous sorted and indexed bam file of reads aligned to reference genome
-                        -D <Num,Num> the depth range to filter raw insertion site, [default 2,200]
+                        -d <Num,Num> the depth range to filter raw insertion site, [default 2,200]
 
                 -q <Num>  the minimum average mapping quality of all supporting reads, [default 1]
 
@@ -85,8 +85,7 @@ USAGE:
                 -h print this help message    
 
 
-                eg: perl  /psc/home/jiangchuan/Dropbox/Code/Code_TE_inser/itis.pl -g genome.fa -t tnt1.fa -l 300 -N test_run -1 reads.fq1 -2 reads.fq2 
--f medicago.gff3 
+                eg: perl  /psc/home/jiangchuan/Dropbox/Code/Code_TE_inser/itis.pl -g genome.fa -t tnt1.fa -l 300 -N test_run -1 reads.fq1 -2 reads.fq2 -f medicago.gff3 
 
 -------------
 
