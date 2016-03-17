@@ -26,7 +26,7 @@ getopts("i:l:b:c:n:q:d:r:h",\%opt);
 die $help  if($opt{h});
 
 ######## parameters ###########
-myb $nb = $opt{b}?$opt{b}:100;
+my $nb = $opt{b}?$opt{b}:100;
 my $ins_file = $opt{i};
 my $lst = $opt{l};
 
