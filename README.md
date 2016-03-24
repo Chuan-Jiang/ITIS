@@ -8,6 +8,8 @@ It require three input files:<br>
 
 By aligning read pairs to merged reference sequence, reference genome and TE sequence, ITIS will check each informative read pairs as long as it have more than 20bp overlap with TE sequence and determine if it supports the TE insertion around the location mapped by one of read pair.  In theory, by inspecting both cross read pairs and clipped reads at the same time, ITIS will have a higher sensitivity than other tools
 
+
+NOTE: ITIS should be used to identy de novo insertions sites, It is unable to detect the lose event of one preexisting TEs.  
 ---
 ---
 
@@ -130,6 +132,13 @@ First of all, untar the sample dataset:
 				DP=average depth of 100bp region flanking the TE insertion site
 				TS=the joint position at the begin of TE
 				TE=the joint pisition at the end of TE
+		                 result contents with test_data:
+                     Chr1:0-2000000  174497  174500  SR=8,9,6,2,0,1;MQ=57;NM=mping;GT=8,0:Heter;PV=0.03125;DP=16;TS=1;TE=430;NB=N    .       +
+                     Chr1:0-2000000  214352  214355  SR=15,17,9,5,1,2;MQ=57;NM=mping;GT=15,0:Homo;PV=0.00390625;DP=17;TS=1;TE=430;NB=N       .       +
+                     Chr1:0-2000000  316534  316537  SR=9,14,3,11,0,0;MQ=57;NM=mping;GT=9,0:Heter;PV=0.03125;DP=20;TS=1;TE=430;NB=N  .       -
+                     Chr1:0-2000000  639972  639975  SR=8,8,4,3,0,1;MQ=51;NM=mping;GT=8,14:Heter;PV=0.9903946;DP=28;TS=1;TE=430;NB=N .       +
+                     Chr1:0-2000000  1193504 1193507 SR=9,12,5,7,0,0;MQ=56;NM=mping;GT=9,0:Heter;PV=0.03125;DP=18;TS=1;TE=430;NB=N   .       +
+                     Chr1:0-2000000  1374936 1374939 SR=8,10,7,2,0,1;MQ=59;NM=mping;GT=8,10:Heter;PV=0.9407654;DP=28;TS=1;TE=430;NB=N        .       +
 		test.mping.raw.bed  
 			This is all candidate insertion sites, some of which may be false 
 		test.mping.support.reads.sam and test.mping.support.reads.sorted.bam
