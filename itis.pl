@@ -11,7 +11,7 @@ my $usage = "USAGE:
 	REQUIRED -g the genome sequence file in fasta format  
 		OR -G prefix of bwa-indexed reference file ( genome + transposon)	
 	REQUIRED -t the TE sequence file in fasta format
-		or -T prefix of bwa-indexed transposon sequence file
+				### (deprecated)or -T prefix of bwa-indexed transposon sequence file
 	REQUIRED -l the average length of fragments in library	
 	REQUIRED -N the name of project
 	REQUIRED -1 the paired read file 1
@@ -67,7 +67,7 @@ die "$usage\n" if ($opt{h});
 my $genome = $opt{g};
 my $te_seq = $opt{t};
 
-my $index_te = $opt{T};
+#my $index_te = $opt{T};
 my $index_ref = $opt{G};
 
 my $lib_len = $opt{l};
