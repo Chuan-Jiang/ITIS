@@ -67,7 +67,7 @@ die "$usage\n" if ($opt{h});
 my $genome = $opt{g};
 my $te_seq = $opt{t};
 
-#my $index_te = $opt{T};
+my $index_te = $opt{T};
 my $index_ref = $opt{G};
 
 my $lib_len = $opt{l};
