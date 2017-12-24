@@ -1,5 +1,5 @@
 #ITIS:(Identify Transposon Insertion Sites)<br>
-is a pipeline to identify de novo TE insertion sites in genome
+is a pipeline to identify novel TE insertion sites in genome
 
 It require three input files:<br>  	
 	(i) reference genome sequence,<br> 
@@ -158,7 +158,7 @@ First of all, untar the sample dataset:
 -------------
 
 ### <a name="#iss">Report an Issue
-If you have any questions or suggestion, please feel free to contact me :chjiang at sibs.ac.cn
+If you have any questions or suggestion, please feel free to contact me :chuan-j@foxmail.com  or chjiang at sibs.ac.cn
 -----------
 
 
